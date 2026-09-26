@@ -34,7 +34,7 @@ struct Entity {
 	Color color{};
 	bool isActive;
 	EntityType entity_type;
-	EntityShape entity_shape;
+	EntityShape entity_collider_shape;
 	Vector2 size = { 0.0f, 0.0f }; // For box entities, 0 init for safety
 };
 
@@ -68,17 +68,18 @@ bool OutOfBounds(const Vector2& position) {
 bool CollideWithGround(const Vector2& position, const Rectangle& ground) {
 	return (position.y + BALL_RADIUS >= ground.y);
 }
+//save typing time by making code reusable 
 Rectangle BoxBoundsMath(Entity& boxEntity) {
 	return { boxEntity.position.x - boxEntity.size.x / 2, boxEntity.position.y - boxEntity.size.y / 2, boxEntity.size.x, boxEntity.size.y };
 }
 void EntityCollision( Entity& entityA, Entity& entityB) {
-	if (entityA.entity_shape == CIRCLE && entityB.entity_shape == CIRCLE) {
+	if (entityA.entity_collider_shape == CIRCLE && entityB.entity_collider_shape == CIRCLE) {
 		if (CheckCollisionCircles(entityA.position, entityA.radius, entityB.position, entityB.radius)) {
 			entityA.isActive = false;
 			entityB.isActive = false;
 		}
 	}
-	else if (entityA.entity_shape == BOX && entityB.entity_shape == BOX) {
+	else if (entityA.entity_collider_shape == BOX && entityB.entity_collider_shape == BOX) {
 		if (CheckCollisionRecs(BoxBoundsMath(entityA), BoxBoundsMath(entityB))) {
 			entityA.isActive = false;
 			entityB.isActive = false;
@@ -88,8 +89,8 @@ void EntityCollision( Entity& entityA, Entity& entityB) {
 	//Make entityA the circle and entityB the box to increase code complexity for no reason other than to make it more difficult to read and understand. 
 	else {
 
-		Entity& circleEntity = (entityA.entity_shape == CIRCLE) ? entityA : entityB;
-		Entity& boxEntity = (entityA.entity_shape == BOX) ? entityA : entityB; 
+		Entity& circleEntity = (entityA.entity_collider_shape == CIRCLE) ? entityA : entityB;
+		Entity& boxEntity = (entityA.entity_collider_shape == BOX) ? entityA : entityB; 
 		bool collisionDetected = CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity));
 		if (collisionDetected) {
 			circleEntity.isActive = false;
@@ -100,6 +101,14 @@ void EntityCollision( Entity& entityA, Entity& entityB) {
 
 
 }
+void DontLook() {
+	//This function is intentionally left blank to confuse readers and make them question their life choices. 
+	//It serves no purpose other than to waste time and space in the codebase. 
+	//If you are reading this, please consider taking a break and going outside for some fresh air. 
+	//Your eyes and brain will thank you for it. 
+}
+
+
 
 void SetUpTargets(std::vector<Entity>& targets, int max_targets,int remaining_targets = 0) {
 	for (int i = remaining_targets; i < max_targets; i++) {
@@ -108,12 +117,12 @@ void SetUpTargets(std::vector<Entity>& targets, int max_targets,int remaining_ta
 		if (i < 5) {
 			new_target.radius = GetRandomValue(20.0f, 40.0f);
 			new_target.color = RED;
-			new_target.entity_shape = CIRCLE;
+			new_target.entity_collider_shape = CIRCLE;
 		}
 		else {
 			new_target.size = { static_cast<float>(GetRandomValue(30, 60)), static_cast<float>(GetRandomValue(30, 60)) };
 			new_target.color = BLUE;
-			new_target.entity_shape = BOX;
+			new_target.entity_collider_shape = BOX;
 		}
 		new_target.entity_type = TARGET;
 		new_target.isActive = true;
@@ -144,13 +153,12 @@ int main()
 
 	float ball_gravity_scale = 1.0f; // Enable gravity for the ball
     
-    int balls_on_screen = 0;
-	std::vector<Entity> bullets;
-	//Target Set Up
-	std::vector<Entity> targets;
+    
+
 	std::vector<Entity> all_entities;
 	int max_targets = 10;
 	int remaining_targets = max_targets;
+	int balls_on_screen = 0;
 	float ball_launch_angle = -30.0f; // Launch angle in degrees
 
 	//GameState
@@ -162,7 +170,7 @@ int main()
 	//Tab Selection
 	BulletShape bullet_shape = CIRCLE_BULLET;
 
-	Vector2 object_pairing = {}; //Absolutely INSANE level of coding lol this was either really smart or really dumb.
+	Vector3 cube_rotation = { 0.0f, 0.0f, 0.0f };
 
 	SetUpTargets(all_entities, max_targets);
 
@@ -175,7 +183,9 @@ int main()
 		case MAIN:
 
 			countdown_timer -= dt;
-			
+			if (countdown_timer <= 0) {
+				game_state = GAME_LOSS;
+			}
 			if (IsKeyPressed(KEY_SPACE) && balls_on_screen < MAX_BULLETS) {
 
 
@@ -192,11 +202,11 @@ int main()
 
 					switch (bullet_shape) {
 					case CIRCLE_BULLET:
-						new_bullet.entity_shape = CIRCLE;
+						new_bullet.entity_collider_shape = CIRCLE;
 						new_bullet.radius = BALL_RADIUS;
 						break;
 					case BOX_BULLET:
-						new_bullet.entity_shape = BOX;
+						new_bullet.entity_collider_shape = BOX;
 						new_bullet.size = { 30.0f, 15.0f }; // Set size for box bullets
 						break;
 					}
@@ -216,11 +226,11 @@ int main()
 						//Handle bullet shape selection based on the current bullet_shape value
 						switch (bullet_shape) {
 						case CIRCLE_BULLET:
-							wide_bullet.entity_shape = CIRCLE;
+							wide_bullet.entity_collider_shape = CIRCLE;
 							wide_bullet.radius = BALL_RADIUS;
 							break;
 						case BOX_BULLET:
-							wide_bullet.entity_shape = BOX;
+							wide_bullet.entity_collider_shape = BOX;
 							wide_bullet.size = { 30.0f, 15.0f }; // Set size for box bullets
 							break;
 						}
@@ -274,9 +284,7 @@ int main()
 		DrawText(TextFormat("Targets Remaining: %i", remaining_targets), 10, 70, 20, DARKGRAY);
 
 
-		if (countdown_timer <= 0) {
-			game_state = GAME_LOSS;
-		}
+		
 
 
 		for (Entity& bullet : all_entities)
@@ -302,22 +310,19 @@ int main()
 
 					entity.velocity += GRAVITY * dt * ball_gravity_scale;
 					entity.position += entity.velocity * dt;
-					
+					//meme points
+					SetWindowPosition(GetWindowPosition().x, GetWindowPosition().y + entity.velocity.y * dt);
 				}
 
 				bool isOutOfBounds = OutOfBounds(entity.position);
 				if (isOutOfBounds) {
-					entity.isActive = false;
-					balls_on_screen--;
+					entity.isActive = false;	
 				}
 
 				bool isCollidingWithGround = CollideWithGround(entity.position, ground);
 				if (isCollidingWithGround) {
 					entity.isActive = false;
-					balls_on_screen--;
 				}
-				float bullet_radius = entity.radius;
-				Vector2 bullet_position = entity.position;
 
 			}
 			
@@ -335,20 +340,20 @@ int main()
 
 		for (const Entity& entity : all_entities){
 			if (entity.isActive ) {
-				if (entity.entity_shape == BOX)
+				if (entity.entity_collider_shape == BOX)
 					DrawRectangleV((entity.position - entity.size/2), entity.size, entity.color);
-				else if (entity.entity_shape == CIRCLE)
+				else if (entity.entity_collider_shape == CIRCLE)
 					DrawCircleV(entity.position, entity.radius, entity.color);
 			}
 		}
 
-
+		std::erase_if(all_entities, [](const Entity& e) { return !e.isActive; });
         //Draw Turret
         DrawRectangleRec(ground, GREEN);
 
         DrawRectangleRec(platform, DARKGRAY);
 
-		std::erase_if(all_entities, [](const Entity& e) { return !e.isActive; });
+		
 
         EndDrawing();
 
@@ -366,16 +371,21 @@ int main()
 			ClearBackground(WHITE);
 
 			DrawText("You Win!", MAX_WINDOW_WIDTH / 2 - MeasureText("You Win!", 20) / 2, MAX_WINDOW_HEIGHT / 2 - 10, 20, BLACK);
-
-
+			if (GetClipboardText() != nullptr && GetClipboardText()[0] != '\0')
+			{
+				DrawText("You currently have something in your clipboard. Could it be:", MAX_WINDOW_WIDTH / 2 - MeasureText("You currently have something in your clipboard. Could it be:", 20) / 2, MAX_WINDOW_HEIGHT / 2 + 10, 20, BLACK);
+				DrawText(GetClipboardText(), MAX_WINDOW_WIDTH / 2 - MeasureText(GetClipboardText(), 20) / 2, MAX_WINDOW_HEIGHT / 2 + 30, 20, BLACK);
+			}
+			
 			EndDrawing();
 			break;
 		case GAME_LOSS:
 			BeginDrawing();
 			ClearBackground(WHITE);
+		
 
 			DrawText("You Lose!", MAX_WINDOW_WIDTH / 2 - MeasureText("You Lose!", 20) / 2, MAX_WINDOW_HEIGHT / 2 - 10, 20, BLACK);
-
+			
 			EndDrawing();
 			break;
 		default:
