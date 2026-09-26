@@ -68,34 +68,37 @@ bool OutOfBounds(const Vector2& position) {
 bool CollideWithGround(const Vector2& position, const Rectangle& ground) {
 	return (position.y + BALL_RADIUS >= ground.y);
 }
-
-void EntityCollision(Vector2& object_pairs, Entity& entityA, Entity& entityB) {
-	if (object_pairs == Vector2{ (float)CIRCLE, (float)CIRCLE }) {
+Rectangle BoxBoundsMath(Entity& boxEntity) {
+	return { boxEntity.position.x - boxEntity.size.x / 2, boxEntity.position.y - boxEntity.size.y / 2, boxEntity.size.x, boxEntity.size.y };
+}
+void EntityCollision( Entity& entityA, Entity& entityB) {
+	if (entityA.entity_shape == CIRCLE && entityB.entity_shape == CIRCLE) {
 		if (CheckCollisionCircles(entityA.position, entityA.radius, entityB.position, entityB.radius)) {
 			entityA.isActive = false;
 			entityB.isActive = false;
 		}
 	}
-	else if (object_pairs == Vector2{ (float)BOX, (float)CIRCLE } ) {
-		if (CheckCollisionCircleRec(entityA.position, entityA.radius, { entityB.position.x - entityB.size.x / 2, entityB.position.y - entityB.size.y / 2, entityB.size.x, entityB.size.y })) {
-			entityA.isActive = false;
-			std::cout << "Collision Detected: Circle (Bullet) hit Box (Target)" << std::endl; // Debug message
-			entityB.isActive = false;
-		}
-	}
-	else if (object_pairs == Vector2{ (float)BOX, (float)BOX }) {
-		if (CheckCollisionRecs({ entityA.position.x - entityA.size.x / 2, entityA.position.y - entityA.size.y / 2, entityA.size.x, entityA.size.y }, { entityB.position.x - entityB.size.x / 2, entityB.position.y - entityB.size.y / 2, entityB.size.x, entityB.size.y })) {
+	else if (entityA.entity_shape == BOX && entityB.entity_shape == BOX) {
+		if (CheckCollisionRecs(BoxBoundsMath(entityA), BoxBoundsMath(entityB))) {
 			entityA.isActive = false;
 			entityB.isActive = false;
 		}
 	}
-	else if (object_pairs == Vector2{ (float)CIRCLE, (float)BOX }) {
-		if (CheckCollisionCircleRec(entityB.position, entityB.radius, { entityA.position.x - entityA.size.x / 2, entityA.position.y - entityA.size.y / 2, entityA.size.x, entityA.size.y })) {
-			entityA.isActive = false;
-			std::cout << "Collision Detected: Circle (Target) hit Box (Bullet)" << std::endl; // Debug message
-			entityB.isActive = false;
+	//Only other possible collision type is Box Circl
+	//Make entityA the circle and entityB the box to increase code complexity for no reason other than to make it more difficult to read and understand. 
+	else {
+
+		Entity& circleEntity = (entityA.entity_shape == CIRCLE) ? entityA : entityB;
+		Entity& boxEntity = (entityA.entity_shape == BOX) ? entityA : entityB; 
+		bool collisionDetected = CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity));
+		if (collisionDetected) {
+			circleEntity.isActive = false;
+			boxEntity.isActive = false;
 		}
+
 	}
+
+
 }
 
 void SetUpTargets(std::vector<Entity>& targets, int max_targets,int remaining_targets = 0) {
@@ -285,9 +288,9 @@ int main()
 			{
 				if (target.entity_type != TARGET || !target.isActive)
 					continue;
-				object_pairing = {(float)target.entity_shape, (float)bullet.entity_shape};
+				
 
-				EntityCollision(object_pairing, bullet, target);
+				EntityCollision( bullet, target);
 		
 			}
 		}
