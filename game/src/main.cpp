@@ -14,18 +14,23 @@ constexpr Vector2 GRAVITY = { 0.0f, 19.6f };
 
 
 enum BulletShape: int {
+	NONE_BULLET,
 	CIRCLE_BULLET,
-	BOX_BULLET
+	BOX_BULLET,
+	CAPSULE_BULLET,
+
 };
 enum EntityType {
 	NONE_ENTITY,
 	BULLET,
-	TARGET
+	TARGET,
+	CAPSULE
 };
 enum EntityShape: int {
 	NONE_SHAPE,
 	CIRCLE,
-	BOX
+	BOX,
+	CAPSULE
 };
 struct Entity {
 	Vector2 position;
@@ -101,6 +106,50 @@ void EntityCollision( Entity& entityA, Entity& entityB) {
 
 
 }
+
+// Setting Up Function Tables
+
+void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity) {
+	if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
+		circleEntity.isActive = false;
+		boxEntity.isActive = false;
+	}
+}
+void CircleCircleCollision(Entity& circleEntityA, Entity& circleEntityB) {
+	if (CheckCollisionCircles(circleEntityA.position, circleEntityA.radius, circleEntityB.position, circleEntityB.radius)) {
+		circleEntityA.isActive = false;
+		circleEntityB.isActive = false;
+	}
+}
+void BoxBoxCollision(Entity& boxEntityA, Entity& boxEntityB) {
+	if (CheckCollisionRecs(BoxBoundsMath(boxEntityA), BoxBoundsMath(boxEntityB))) {
+		boxEntityA.isActive = false;
+		boxEntityB.isActive = false;
+	}
+}
+
+void CapsuleCapsuleCollision(Entity& capsuleEntityA, Entity& capsuleEntityB) {
+	// Placeholder for capsule collision logic
+	// Implement capsule collision detection here if needed
+}
+
+void CapsuleCircleCollision(Entity& capsuleEntity, Entity& circleEntity) {
+	// Placeholder for capsule-circle collision logic
+	// Implement capsule-circle collision detection here if needed
+}
+void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity) {
+	// Placeholder for capsule-box collision logic
+	// Implement capsule-box collision detection here if needed
+}
+
+
+
+
+
+
+
+
+
 void DontLook() {
 	//This function is intentionally left blank to confuse readers and make them question their life choices. 
 	//It serves no purpose other than to waste time and space in the codebase. 
