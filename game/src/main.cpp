@@ -150,9 +150,30 @@ CollisionFunc collisionFunctionTable[4][4] = {
 	{ HitTestNone, CapsuleCircleCollision, CapsuleBoxCollision, CapsuleCapsuleCollision } // CAPSULE
 };
 
+//Drawing functions for different entity shapes
 
+void DrawNone(Entity& entity) {
+	// No drawing logic for NONE shape
+}
 
+void DrawCircleEntity(Entity& entity) {
+	DrawCircleV(entity.position, entity.radius, entity.color);
+}
 
+void DrawBoxEntity(Entity& entity) {
+	DrawRectangleV(entity.position - entity.size / 2, entity.size, entity.color);
+}
+void DrawCapsuleEntity(Entity& entity) {
+	DrawCapsule2D(entity.capsule_start, entity.capsule_end, entity.radius, entity.color);
+}
+
+using DrawFunc = void(*)(Entity&);
+DrawFunc drawFunctionTable[4] = {
+	DrawNone,          // NONE
+	DrawCircleEntity,  // CIRCLE
+	DrawBoxEntity,     // BOX
+	DrawCapsuleEntity  // CAPSULE
+};
 
 
 
@@ -387,12 +408,11 @@ int main()
 		
 		balls_on_screen = std::count_if(all_entities.begin(), all_entities.end(), [](const Entity& e) { return e.entity_type == BULLET && e.isActive; });
 
-		for (const Entity& entity : all_entities){
+
+		//handleDrawing of entities using the draw function table
+		for ( Entity& entity : all_entities){
 			if (entity.isActive ) {
-				if (entity.entity_collider_shape == BOX)
-					DrawRectangleV((entity.position - entity.size/2), entity.size, entity.color);
-				else if (entity.entity_collider_shape == CIRCLE)
-					DrawCircleV(entity.position, entity.radius, entity.color);
+				drawFunctionTable[entity.entity_collider_shape](entity);
 			}
 		}
 
