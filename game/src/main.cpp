@@ -24,7 +24,7 @@ enum EntityType {
 	NONE_ENTITY,
 	BULLET,
 	TARGET,
-	CAPSULE
+	PILL
 };
 enum EntityShape: int {
 	NONE_SHAPE,
@@ -77,37 +77,9 @@ bool CollideWithGround(const Vector2& position, const Rectangle& ground) {
 Rectangle BoxBoundsMath(Entity& boxEntity) {
 	return { boxEntity.position.x - boxEntity.size.x / 2, boxEntity.position.y - boxEntity.size.y / 2, boxEntity.size.x, boxEntity.size.y };
 }
-void EntityCollision( Entity& entityA, Entity& entityB) {
-	if (entityA.entity_collider_shape == CIRCLE && entityB.entity_collider_shape == CIRCLE) {
-		if (CheckCollisionCircles(entityA.position, entityA.radius, entityB.position, entityB.radius)) {
-			entityA.isActive = false;
-			entityB.isActive = false;
-		}
-	}
-	else if (entityA.entity_collider_shape == BOX && entityB.entity_collider_shape == BOX) {
-		if (CheckCollisionRecs(BoxBoundsMath(entityA), BoxBoundsMath(entityB))) {
-			entityA.isActive = false;
-			entityB.isActive = false;
-		}
-	}
-	//Only other possible collision type is Box Circl
-	//Make entityA the circle and entityB the box to increase code complexity for no reason other than to make it more difficult to read and understand. 
-	else {
-
-		Entity& circleEntity = (entityA.entity_collider_shape == CIRCLE) ? entityA : entityB;
-		Entity& boxEntity = (entityA.entity_collider_shape == BOX) ? entityA : entityB; 
-		bool collisionDetected = CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity));
-		if (collisionDetected) {
-			circleEntity.isActive = false;
-			boxEntity.isActive = false;
-		}
-
-	}
 
 
-}
-
-// Setting Up Function Tables
+// Setting Up Function Tables. I 
 
 void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity) {
 	if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
@@ -141,11 +113,31 @@ void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity) {
 	// Placeholder for capsule-box collision logic
 	// Implement capsule-box collision detection here if needed
 }
+void CircleCapsuleCollision(Entity& circleEntity, Entity& capsuleEntity) {
+	// Placeholder for circle-capsule collision logic
+	// Implement circle-capsule collision detection here if needed
+}
+void BoxCapsuleCollision(Entity& boxEntity, Entity& capsuleEntity) {
+	// Placeholder for box-capsule collision logic
+	// Implement box-capsule collision detection here if needed
+}
+void BoxCircleCollision(Entity& boxEntity, Entity& circleEntity) {
+	if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
+		boxEntity.isActive = false;
+		circleEntity.isActive = false;
+	}
+}
 
 
+using CollisionFunc = void(*)(Entity&, Entity&);
 
-
-
+CollisionFunc collisionFunctionTable[4][4] = {
+	// NONE     CIRCLE                  BOX                  CAPSULE
+	{ nullptr, nullptr,                nullptr,             nullptr },                // NONE
+	{ nullptr, CircleCircleCollision,  CircleBoxCollision,  CircleCapsuleCollision }, // CIRCLE
+	{ nullptr, BoxCircleCollision,     BoxBoxCollision,     BoxCapsuleCollision },    // BOX
+	{ nullptr, CapsuleCircleCollision, CapsuleBoxCollision, CapsuleCapsuleCollision } // CAPSULE
+};
 
 
 
@@ -335,7 +327,7 @@ int main()
 
 		
 
-
+		/* old Collision Code*
 		for (Entity& bullet : all_entities)
 		{
 			if (bullet.entity_type != BULLET || !bullet.isActive)
@@ -351,6 +343,24 @@ int main()
 		
 			}
 		}
+		*/
+
+		//Func Table look up
+
+		for (int i = 0; i < all_entities.size(); ++i) {
+			Entity& entityA = all_entities[i];
+			if (!entityA.isActive) continue;
+			for (int j = i + 1; j < all_entities.size(); ++j) {
+				Entity& entityB = all_entities[j];
+				if (!entityB.isActive) continue;
+				CollisionFunc collisionFunc = collisionFunctionTable[entityA.entity_collider_shape][entityB.entity_collider_shape];
+				if (collisionFunc) {
+					collisionFunc(entityA, entityB);
+				}
+			}
+		}
+
+
 		//handle Bullet stuff, gravity, and out of bounds
         for (Entity& entity : all_entities) {
 			if (entity.entity_type == BULLET) {
