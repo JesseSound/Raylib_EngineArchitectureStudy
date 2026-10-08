@@ -33,14 +33,16 @@ enum EntityShape: int {
 	CAPSULE
 };
 struct Entity {
-	Vector2 position;
-	Vector2 velocity;
+	Vector2 position{};
+	Vector2 velocity{};
 	float radius = 0.0f; // For circle entities, 0 init for safety
 	Color color{};
-	bool isActive;
-	EntityType entity_type;
-	EntityShape entity_collider_shape;
+	bool isActive = false;
+	EntityType entity_type = NONE_ENTITY;
+	EntityShape entity_collider_shape = NONE_SHAPE;
 	Vector2 size = { 0.0f, 0.0f }; // For box entities, 0 init for safety
+	Vector2 capsule_start{};
+	Vector2 capsule_end{};
 };
 
 
@@ -77,8 +79,14 @@ bool CollideWithGround(const Vector2& position, const Rectangle& ground) {
 Rectangle BoxBoundsMath(Entity& boxEntity) {
 	return { boxEntity.position.x - boxEntity.size.x / 2, boxEntity.position.y - boxEntity.size.y / 2, boxEntity.size.x, boxEntity.size.y };
 }
-
-
+//capsule gen
+void DrawCapsule2D(Vector2 startPos, Vector2 endPos, float radius, Color color)
+{
+	// The diameter of the capsule's rounded caps matches the line's thickness
+	DrawLineEx(startPos, endPos, radius * 2.0f, color);
+	DrawCircleV(startPos, radius, color);
+	DrawCircleV(endPos, radius, color);
+}
 // Setting Up Function Tables. I 
 
 void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity) {
@@ -127,27 +135,25 @@ void BoxCircleCollision(Entity& boxEntity, Entity& circleEntity) {
 		circleEntity.isActive = false;
 	}
 }
-
+void HitTestNone(Entity& entityA, Entity& entityB) {
+	// No collision logic for NONE shape
+	
+}
 
 using CollisionFunc = void(*)(Entity&, Entity&);
 
 CollisionFunc collisionFunctionTable[4][4] = {
 	// NONE     CIRCLE                  BOX                  CAPSULE
-	{ nullptr, nullptr,                nullptr,             nullptr },                // NONE
-	{ nullptr, CircleCircleCollision,  CircleBoxCollision,  CircleCapsuleCollision }, // CIRCLE
-	{ nullptr, BoxCircleCollision,     BoxBoxCollision,     BoxCapsuleCollision },    // BOX
-	{ nullptr, CapsuleCircleCollision, CapsuleBoxCollision, CapsuleCapsuleCollision } // CAPSULE
+	{ HitTestNone, HitTestNone,          HitTestNone,       HitTestNone },        // NONE
+	{ HitTestNone, CircleCircleCollision,  CircleBoxCollision,  CircleCapsuleCollision }, // CIRCLE
+	{ HitTestNone, BoxCircleCollision,     BoxBoxCollision,     BoxCapsuleCollision },    // BOX
+	{ HitTestNone, CapsuleCircleCollision, CapsuleBoxCollision, CapsuleCapsuleCollision } // CAPSULE
 };
 
 
 
 
-void DontLook() {
-	//This function is intentionally left blank to confuse readers and make them question their life choices. 
-	//It serves no purpose other than to waste time and space in the codebase. 
-	//If you are reading this, please consider taking a break and going outside for some fresh air. 
-	//Your eyes and brain will thank you for it. 
-}
+
 
 
 
@@ -326,24 +332,8 @@ int main()
 
 
 		
-
-		/* old Collision Code*
-		for (Entity& bullet : all_entities)
-		{
-			if (bullet.entity_type != BULLET || !bullet.isActive)
-				continue;
-
-			for (Entity& target : all_entities)
-			{
-				if (target.entity_type != TARGET || !target.isActive)
-					continue;
-				
-
-				EntityCollision( bullet, target);
 		
-			}
-		}
-		*/
+
 
 		//Func Table look up
 
