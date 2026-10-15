@@ -41,8 +41,22 @@ struct Entity {
 	EntityType entity_type = NONE_ENTITY;
 	EntityShape entity_collider_shape = NONE_SHAPE;
 	Vector2 size = { 0.0f, 0.0f }; // For box entities, 0 init for safety
-	Vector2 capsule_start{};
-	Vector2 capsule_end{};
+	Vector2 capsule_direction{};
+	float capsule_half_length = 0.0f;
+	float capsule_length = 0.0f;
+	void OutOfBounds(const Vector2& position) {
+		bool CheckPosition = (position.x < 0 || position.x > MAX_WINDOW_WIDTH || position.y < 0 || position.y > MAX_WINDOW_HEIGHT);
+		if (CheckPosition) {
+			isActive = false;
+		}	
+	}
+
+	void RunEntityLogic() {
+		if (entity_type == BULLET && isActive) {
+			OutOfBounds(position);
+		}
+	}
+
 };
 
 
@@ -68,9 +82,7 @@ void SetupCalls() {
 }
 
 
-bool OutOfBounds(const Vector2& position) {
-	return (position.x < 0 || position.x > MAX_WINDOW_WIDTH || position.y < 0 || position.y > MAX_WINDOW_HEIGHT);
-}
+
 
 bool CollideWithGround(const Vector2& position, const Rectangle& ground) {
 	return (position.y + BALL_RADIUS >= ground.y);
@@ -79,14 +91,7 @@ bool CollideWithGround(const Vector2& position, const Rectangle& ground) {
 Rectangle BoxBoundsMath(Entity& boxEntity) {
 	return { boxEntity.position.x - boxEntity.size.x / 2, boxEntity.position.y - boxEntity.size.y / 2, boxEntity.size.x, boxEntity.size.y };
 }
-//capsule gen
-void DrawCapsule2D(Vector2 startPos, Vector2 endPos, float radius, Color color)
-{
-	// The diameter of the capsule's rounded caps matches the line's thickness
-	DrawLineEx(startPos, endPos, radius * 2.0f, color);
-	DrawCircleV(startPos, radius, color);
-	DrawCircleV(endPos, radius, color);
-}
+
 // Setting Up Function Tables. I 
 
 void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity) {
@@ -164,7 +169,26 @@ void DrawBoxEntity(Entity& entity) {
 	DrawRectangleV(entity.position - entity.size / 2, entity.size, entity.color);
 }
 void DrawCapsuleEntity(Entity& entity) {
-	DrawCapsule2D(entity.capsule_start, entity.capsule_end, entity.radius, entity.color);
+	
+
+	float rotation_angle = Vector2Angle(Vector2UnitX, entity.capsule_direction) * RAD2DEG;
+
+	Vector2 top = entity.position + entity.capsule_direction * entity.capsule_half_length;
+	Vector2 bottom = entity.position - entity.capsule_direction * entity.capsule_half_length;
+	
+	
+
+	Rectangle rec;
+	rec.x = entity.position.x;
+	rec.y = entity.position.y;
+	rec.width = entity.capsule_half_length * 2.0f;
+	rec.height = entity.radius * 2.0f;
+
+
+
+	DrawRectanglePro(rec, { entity.capsule_half_length, entity.radius }, rotation_angle, entity.color);
+	DrawCircleV(top, entity.radius, entity.color);
+	DrawCircleV(bottom, entity.radius, entity.color);
 }
 
 using DrawFunc = void(*)(Entity&);
@@ -241,7 +265,13 @@ int main()
 	Vector3 cube_rotation = { 0.0f, 0.0f, 0.0f };
 
 	SetUpTargets(all_entities, max_targets);
-
+	Entity CapsuleEntity;
+	
+	CapsuleEntity.radius = 20.0f;
+	CapsuleEntity.capsule_half_length = 60.0f;
+	CapsuleEntity.color = PURPLE;
+	CapsuleEntity.entity_type = PILL;
+	CapsuleEntity.entity_collider_shape = CAPSULE;
 	float countdown_timer = 60.0f; // Countdown timer in seconds
     while (!WindowShouldClose())
     {
@@ -350,10 +380,10 @@ int main()
 		DrawText(TextFormat("Time: %f", countdown_timer), 10, 10, 20, DARKGRAY);
 		DrawText(TextFormat("Weapon Selected: %s", weapon_type == TARGETSHOT ? "Target Shot" : "Wide Shot"), 10, 40, 20, DARKGRAY); 
 		DrawText(TextFormat("Targets Remaining: %i", remaining_targets), 10, 70, 20, DARKGRAY);
-
-
-		
-		
+	
+		CapsuleEntity.position = GetMousePosition();
+		CapsuleEntity.capsule_direction = Vector2Normalize(Vector2Subtract(GetMousePosition(), ball_launch_position));
+		DrawCapsuleEntity(CapsuleEntity);
 
 
 		//Func Table look up
@@ -381,13 +411,11 @@ int main()
 					entity.velocity += GRAVITY * dt * ball_gravity_scale;
 					entity.position += entity.velocity * dt;
 					//meme points
-					SetWindowPosition(GetWindowPosition().x, GetWindowPosition().y + entity.velocity.y * dt);
+					//SetWindowPosition(GetWindowPosition().x, GetWindowPosition().y + entity.velocity.y * dt);
+					entity.RunEntityLogic();
 				}
 
-				bool isOutOfBounds = OutOfBounds(entity.position);
-				if (isOutOfBounds) {
-					entity.isActive = false;	
-				}
+				
 
 				bool isCollidingWithGround = CollideWithGround(entity.position, ground);
 				if (isCollidingWithGround) {
@@ -417,12 +445,19 @@ int main()
 		}
 
 		std::erase_if(all_entities, [](const Entity& e) { return !e.isActive; });
+
+
+
+
         //Draw Turret
         DrawRectangleRec(ground, GREEN);
 
         DrawRectangleRec(platform, DARKGRAY);
 
 		
+		
+
+
 
         EndDrawing();
 
