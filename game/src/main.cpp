@@ -161,51 +161,35 @@ void NearestVerticesOnBoxToCapsule(Entity& boxEntity, Entity& capsuleEntity, Vec
 
 }
 
-
+//seperated due to length
 bool CheckCapsuleBox(Entity& capsuleEntity, Entity& boxEntity) {
 
-	Vector2 top = capsuleEntity.position +
-		capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
+	Vector2 top = capsuleEntity.position + capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
 
-	Vector2 bottom = capsuleEntity.position -
-		capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
+	Vector2 bottom = capsuleEntity.position - capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
 
 	Rectangle box = BoxBoundsMath(boxEntity);
 
 	Vector2 boxMin = { box.x, box.y };
 	Vector2 boxMax = { box.x + box.width, box.y + box.height };
 
-	// Check box vertices against capsule centerline
 	Vector2 nearestVertex;
 	Vector2 nearestCapsulePoint;
 
-	NearestVerticesOnBoxToCapsule(
-		boxEntity,
-		capsuleEntity,
-		&nearestVertex,
-		&nearestCapsulePoint
-	);
+	NearestVerticesOnBoxToCapsule(boxEntity,capsuleEntity,&nearestVertex,&nearestCapsulePoint);
 
-	float minDistanceSquared =
-		Vector2DistanceSqr(nearestVertex, nearestCapsulePoint);
+	float minDistanceSquared = Vector2DistanceSqr(nearestVertex, nearestCapsulePoint);
 
-	// Check capsule endpoints against box
+	
 	Vector2 closestTop = Vector2Clamp(top, boxMin, boxMax);
 	Vector2 closestBottom = Vector2Clamp(bottom, boxMin, boxMax);
 
-	minDistanceSquared = std::min(
-		minDistanceSquared,
-		Vector2DistanceSqr(top, closestTop)
-	);
+	minDistanceSquared = std::min(minDistanceSquared,Vector2DistanceSqr(top, closestTop));
 
-	minDistanceSquared = std::min(
-		minDistanceSquared,
-		Vector2DistanceSqr(bottom, closestBottom)
-	);
+	minDistanceSquared = std::min(minDistanceSquared,Vector2DistanceSqr(bottom, closestBottom));
 
-	// Check whether capsule centerline intersects box
-	if (CheckCollisionPointRec(top, box) ||
-		CheckCollisionPointRec(bottom, box)) {
+	
+	if (CheckCollisionPointRec(top, box) ||CheckCollisionPointRec(bottom, box)) {
 		return true;
 	}
 
@@ -219,17 +203,13 @@ bool CheckCapsuleBox(Entity& capsuleEntity, Entity& boxEntity) {
 	for (int i = 0; i < 4; i++) {
 		Vector2 intersection;
 
-		if (CheckCollisionLines(
-			bottom, top,
-			corners[i], corners[(i + 1) % 4],
-			&intersection)) {
+		if (CheckCollisionLines(bottom, top,corners[i], corners[(i + 1) % 4],&intersection)) {
 			return true;
 		}
 	}
 
-	// Capsule collides if distance is within its radius
-	return minDistanceSquared <=
-		capsuleEntity.radius * capsuleEntity.radius;
+	
+	return minDistanceSquared <=capsuleEntity.radius * capsuleEntity.radius;
 }
 
 
@@ -391,10 +371,6 @@ DrawFunc drawFunctionTable[4] = {
 };
 
 
-//Capsule stuff?
-
-
-
 
 
 
@@ -505,6 +481,9 @@ int main()
 	all_entities.push_back(CapsuleEntity);
 
 	bool isColliding = false;
+	//ABOVE IS JUST FOR LAB 4
+
+
 
 	float countdown_timer = 60.0f; // Countdown timer in seconds
     while (!WindowShouldClose())
