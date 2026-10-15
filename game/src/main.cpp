@@ -8,7 +8,7 @@
 #define MAX_WINDOW_WIDTH 800    
 #define MAX_FPS 60
 #define MAX_BULLETS 30
-#define TESTING true	
+#define TESTING false	
 constexpr float BALL_RADIUS = 25.0f;
 constexpr Vector2 GRAVITY = { 0.0f, 19.6f };
 
@@ -220,26 +220,26 @@ bool CollideWithGround(const Vector2& position, const Rectangle& ground) {
 
 // Setting Up Function Tables. I 
 
-void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity) {
+void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity, Vector2* mtv) {
 	if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
 		circleEntity.isActive = false;
 		boxEntity.isActive = false;
 	}
 }
-void CircleCircleCollision(Entity& circleEntityA, Entity& circleEntityB) {
+void CircleCircleCollision(Entity& circleEntityA, Entity& circleEntityB, Vector2* mtv) {
 	if (CheckCollisionCircles(circleEntityA.position, circleEntityA.radius, circleEntityB.position, circleEntityB.radius)) {
 		circleEntityA.isActive = false;
 		circleEntityB.isActive = false;
 	}
 }
-void BoxBoxCollision(Entity& boxEntityA, Entity& boxEntityB) {
+void BoxBoxCollision(Entity& boxEntityA, Entity& boxEntityB, Vector2* mtv) {
 	if (CheckCollisionRecs(BoxBoundsMath(boxEntityA), BoxBoundsMath(boxEntityB))) {
 		boxEntityA.isActive = false;
 		boxEntityB.isActive = false;
 	}
 }
 
-void CapsuleCapsuleCollision(Entity& capsuleEntityA, Entity& capsuleEntityB) {
+void CapsuleCapsuleCollision(Entity& capsuleEntityA, Entity& capsuleEntityB, Vector2* mtv) {
 
 	Vector2 topA = capsuleEntityA.position + capsuleEntityA.capsule_direction * capsuleEntityA.capsule_half_length;
 	Vector2 bottomA = capsuleEntityA.position - capsuleEntityA.capsule_direction * capsuleEntityA.capsule_half_length;
@@ -256,7 +256,7 @@ void CapsuleCapsuleCollision(Entity& capsuleEntityA, Entity& capsuleEntityB) {
 }
 
 
-void CapsuleCircleCollision(Entity& capsuleEntity, Entity& circleEntity) {
+void CapsuleCircleCollision(Entity& capsuleEntity, Entity& circleEntity, Vector2* mtv) {
 	//1)
 	Vector2 top = capsuleEntity.position + capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
 	//2)
@@ -270,17 +270,17 @@ void CapsuleCircleCollision(Entity& capsuleEntity, Entity& circleEntity) {
 	}
 	
 }
-void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity) {
+void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity, Vector2* mtv) {
 	if (CheckCapsuleBox(capsuleEntity, boxEntity)) {
 		capsuleEntity.isActive = false;
 		boxEntity.isActive = false;
 	}
 }
 
-void BoxCapsuleCollision(Entity& boxEntity, Entity& capsuleEntity) {
-	CapsuleBoxCollision(capsuleEntity, boxEntity);
+void BoxCapsuleCollision(Entity& boxEntity, Entity& capsuleEntity, Vector2* mtv) {
+	CapsuleBoxCollision(capsuleEntity, boxEntity, mtv);
 }
-void CircleCapsuleCollision(Entity& circleEntity, Entity& capsuleEntity) {
+void CircleCapsuleCollision(Entity& circleEntity, Entity& capsuleEntity, Vector2* mtv) {
 	//1)
 	Vector2 top = capsuleEntity.position + capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
 	//2)
@@ -294,18 +294,18 @@ void CircleCapsuleCollision(Entity& circleEntity, Entity& capsuleEntity) {
 	}
 }
 
-void BoxCircleCollision(Entity& boxEntity, Entity& circleEntity) {
+void BoxCircleCollision(Entity& boxEntity, Entity& circleEntity, Vector2* mtv) {
 	if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
 		boxEntity.isActive = false;
 		circleEntity.isActive = false;
 	}
 }
-void HitTestNone(Entity& entityA, Entity& entityB) {
+void HitTestNone(Entity& entityA, Entity& entityB, Vector2* mtv) {
 	// No collision logic for NONE shape
 	
 }
 
-using CollisionFunc = void(*)(Entity&, Entity&);
+using CollisionFunc = void(*)(Entity&, Entity&, Vector2* mtv);
 
 CollisionFunc collisionFunctionTable[4][4] = {
 	// NONE     CIRCLE                  BOX                  CAPSULE
@@ -603,7 +603,7 @@ int main()
 			for (int j = i + 1; j < all_entities.size(); ++j) {
 				Entity& entityB = all_entities[j];
 				if (!entityB.isActive) continue;
-	
+			
 				if (entityA.entity_type == BULLET && entityB.entity_type == BULLET) {
 					continue;
 				}
@@ -612,7 +612,7 @@ int main()
 				}
 				CollisionFunc collisionFunc = collisionFunctionTable[entityA.entity_collider_shape][entityB.entity_collider_shape];
 				if (collisionFunc) {
-					collisionFunc(entityA, entityB);
+					collisionFunc(entityA, entityB, nullptr);
 				}
 
 				if (!entityA.isActive) break;
