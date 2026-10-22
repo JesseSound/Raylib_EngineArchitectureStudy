@@ -706,7 +706,7 @@ struct GUIButtons {
 	float width{};
 	float height{};
 	Vector2 size{};
-	Vector2 position;
+	Vector2 position{};
 	Rectangle box{};
 };
 
@@ -750,7 +750,6 @@ int main()
 		"Circle B",
 		"Box B",
 		"Capsule B"
-
 	};
 
 	std::vector<Entity> all_entities;
@@ -790,7 +789,13 @@ int main()
 		newButton.button_text = button_texts[i];
 		newButton.height = 30.0f;
 		newButton.width = 60.0f;
-		newButton.position = { 20.0f + (i * 80), 20.0f };
+		if (i < 4) {
+			newButton.position = { 20.0f + (i * 80), 20.0f };
+		}
+		else {
+			newButton.position = { 20.0f + ((i-4) * 80), 60.0f };
+		}
+
 		newButton.size = { newButton.width, newButton.height };
 		newButton.box = { newButton.position.x,newButton.position.y, newButton.size.x, newButton.size.y };
 
@@ -813,10 +818,6 @@ int main()
 			ClearBackground(WHITE);
 			
 
-
-
-			
-			
 
 
 
