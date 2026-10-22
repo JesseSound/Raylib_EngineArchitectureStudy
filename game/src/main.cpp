@@ -26,7 +26,7 @@ enum EntityType {
 	TARGET,
 	PILL
 };
-enum EntityShape: int {
+enum Collider: int {
 	NONE_SHAPE,
 	CIRCLE,
 	BOX,
@@ -39,7 +39,7 @@ struct Entity {
 	Color color{};
 	bool isActive = false;
 	EntityType entity_type = NONE_ENTITY;
-	EntityShape entity_collider_shape = NONE_SHAPE;
+	Collider entity_collider_type = NONE_SHAPE;
 	Vector2 size = { 0.0f, 0.0f }; // For box entities, 0 init for safety
 	Vector2 capsule_direction{};
 	float capsule_half_length = 0.0f;
@@ -381,12 +381,12 @@ void SetUpTargets(std::vector<Entity>& targets, int max_targets,int remaining_ta
 		if (i < 5) {
 			new_target.radius = GetRandomValue(20.0f, 40.0f);
 			new_target.color = RED;
-			new_target.entity_collider_shape = CIRCLE;
+			new_target.entity_collider_type = CIRCLE;
 		}
 		else {
 			new_target.size = { static_cast<float>(GetRandomValue(30, 60)), static_cast<float>(GetRandomValue(30, 60)) };
 			new_target.color = BLUE;
-			new_target.entity_collider_shape = BOX;
+			new_target.entity_collider_type = BOX;
 		}
 		new_target.entity_type = TARGET;
 		new_target.isActive = true;
@@ -398,94 +398,22 @@ int main()
 {
 	SetupCalls();
 
-    Rectangle ground;
-        ground.x = 0;
-        ground.y = 700;
-        ground.width = MAX_WINDOW_WIDTH;
-        ground.height = 20;
 
-    Rectangle platform;
-        platform.x = 100;
-        platform.y = ground.y - 100.0f;
-        platform.width = 50;
-        platform.height = 100;
-    Vector2 ball_launch_position;
-        ball_launch_position.x = platform.x + BALL_RADIUS;
-        ball_launch_position.y = platform.y - BALL_RADIUS;
-	    Vector2 ball_position = ball_launch_position;
-        Vector2 ball_velocity = Vector2Zeros;
-
-	float ball_gravity_scale = 1.0f; // Enable gravity for the ball
     
     
 
 	std::vector<Entity> all_entities;
-	int max_targets = 10;
-	int remaining_targets = max_targets;
-	int balls_on_screen = 0;
-	float ball_launch_angle = -30.0f; // Launch angle in degrees
+
 
 	//GameState
 	GameState game_state = MAIN;
 
-	//Weapon Type Definer
-	WeaponType weapon_type = TARGETSHOT;
-
-	//Tab Selection
-	BulletShape bullet_shape = CIRCLE_BULLET;
-
-	Vector3 cube_rotation = { 0.0f, 0.0f, 0.0f };
-
-	SetUpTargets(all_entities, max_targets);
-
-
-	//JUST FOR LAB 4
-	Entity CapsuleEntity;
-	
-	CapsuleEntity.radius = 20.0f;
-	CapsuleEntity.capsule_half_length = 60.0f;
-	CapsuleEntity.color = PURPLE;
-	CapsuleEntity.entity_type = PILL;
-	CapsuleEntity.entity_collider_shape = CAPSULE;
-	CapsuleEntity.isActive = true;
-	CapsuleEntity.follows_mouse = true;
-	CapsuleEntity.capsule_direction = Vector2Normalize(Vector2Subtract(Vector2Zero(), ball_launch_position));
-
-	
-	Entity testCapsule;
-	testCapsule.position = { 400.0f, 400.0f };
-	testCapsule.capsule_direction = { 0.0f, 1.0 };
-	testCapsule.color = YELLOW;
-	testCapsule.capsule_half_length = 50.0f;
-	testCapsule.radius = 20.0f;
-	testCapsule.entity_type = PILL;
-	testCapsule.entity_collider_shape = CAPSULE;
-	testCapsule.isActive = true;
-	Entity testBox;
-	testBox.position = { 500.0f, 400.0f };
-	testBox.size = { 100.0f, 100.0f };	
-	testBox.color = ORANGE;
-	testBox.entity_type = TARGET;
-	testBox.entity_collider_shape = BOX;
-	testBox.isActive = true;
-	Entity testCircle;
-	testCircle.radius = 20.0f;
-	testCircle.color = GREEN;
-	testCircle.entity_collider_shape = CIRCLE;
-	testCircle.position = { 150.0f,200.f };
-	testCircle.entity_collider_shape = CIRCLE;
-	testCircle.isActive = true;
-	all_entities.push_back(testCircle);
-	all_entities.push_back(testBox);
-	all_entities.push_back(testCapsule);
-	all_entities.push_back(CapsuleEntity);
-
-	bool isColliding = false;
-	//ABOVE IS JUST FOR LAB 4
 
 
 
-	float countdown_timer = 60.0f; // Countdown timer in seconds
+
+
+
     while (!WindowShouldClose())
     {
 		float dt = GetFrameTime();
@@ -493,106 +421,16 @@ int main()
 		{
 		case MAIN:
 
-			countdown_timer -= dt;
-			if (countdown_timer <= 0) {
-				game_state = GAME_LOSS;
-			}
-			if (IsKeyPressed(KEY_SPACE) && balls_on_screen < MAX_BULLETS) {
+			
+			
 
 
-				if (weapon_type == TARGETSHOT) {
 
-					Entity new_bullet;
-					new_bullet.position = ball_launch_position;
-
-
-					new_bullet.isActive = true;
-					new_bullet.color = RED;
-					new_bullet.entity_type = BULLET;
-
-
-					switch (bullet_shape) {
-					case CIRCLE_BULLET:
-						new_bullet.entity_collider_shape = CIRCLE;
-						new_bullet.radius = BALL_RADIUS;
-						break;
-					case BOX_BULLET:
-						new_bullet.entity_collider_shape = BOX;
-						new_bullet.size = { 30.0f, 15.0f }; // Set size for box bullets
-						break;
-					}
-
-
-					new_bullet.velocity = Vector2Rotate(Vector2UnitX, ball_launch_angle * DEG2RAD) * 200.0f;
-					all_entities.push_back(new_bullet);
-				}
-
-				else if (weapon_type == WIDESHOT) {
-
-					for (int i = -1; i <= 1; i++) {
-
-						Entity wide_bullet;
-						wide_bullet.position = ball_launch_position;
-
-						//Handle bullet shape selection based on the current bullet_shape value
-						switch (bullet_shape) {
-						case CIRCLE_BULLET:
-							wide_bullet.entity_collider_shape = CIRCLE;
-							wide_bullet.radius = BALL_RADIUS;
-							break;
-						case BOX_BULLET:
-							wide_bullet.entity_collider_shape = BOX;
-							wide_bullet.size = { 30.0f, 15.0f }; // Set size for box bullets
-							break;
-						}
-
-						wide_bullet.isActive = true;
-						wide_bullet.color = DARKBLUE;
-						wide_bullet.entity_type = BULLET;
-
-
-						wide_bullet.velocity = Vector2Rotate(Vector2UnitX, (ball_launch_angle + i * 20.0f) * DEG2RAD) * 200.0f;
-						all_entities.push_back(wide_bullet);
-
-
-					}
-				}
-			}
-
-			if (IsKeyPressed(KEY_A)) {
-				SetUpTargets(all_entities, max_targets, remaining_targets);
-			}
-			if (IsKeyPressed(KEY_T)) {
-				if (weapon_type == TARGETSHOT) {
-					weapon_type = WIDESHOT;
-				}
-				else if (weapon_type == WIDESHOT) {
-					weapon_type = TARGETSHOT;
-				}
-			}
-
-			if (IsKeyDown(KEY_UP)) {
-				ball_launch_angle -= 100.0f * dt;
-			}
-			if (IsKeyDown(KEY_DOWN)) {
-				ball_launch_angle += 100.0f * dt;
-			}
-
-			if (IsKeyPressed(KEY_TAB)) {
-				if (bullet_shape == CIRCLE_BULLET) {
-					bullet_shape = BOX_BULLET;
-				}
-				else if (bullet_shape == BOX_BULLET) {
-					bullet_shape = CIRCLE_BULLET;
-				}
-			}
 
 			BeginDrawing();
 			ClearBackground(WHITE);
-			//"UI" Studd
-			DrawText(TextFormat("Time: %f", countdown_timer), 10, 10, 20, DARKGRAY);
-			DrawText(TextFormat("Weapon Selected: %s", weapon_type == TARGETSHOT ? "Target Shot" : "Wide Shot"), 10, 40, 20, DARKGRAY);
-			DrawText(TextFormat("Targets Remaining: %i", remaining_targets), 10, 70, 20, DARKGRAY);
+			
+
 			
 
 
@@ -603,14 +441,7 @@ int main()
 			for (int j = i + 1; j < all_entities.size(); ++j) {
 				Entity& entityB = all_entities[j];
 				if (!entityB.isActive) continue;
-			
-				if (entityA.entity_type == BULLET && entityB.entity_type == BULLET) {
-					continue;
-				}
-				if (entityA.entity_type == TARGET && entityB.entity_type == TARGET) {
-					continue;
-				}
-				CollisionFunc collisionFunc = collisionFunctionTable[entityA.entity_collider_shape][entityB.entity_collider_shape];
+				CollisionFunc collisionFunc = collisionFunctionTable[entityA.entity_collider_type][entityB.entity_collider_type];
 				if (collisionFunc) {
 					collisionFunc(entityA, entityB, nullptr);
 				}
@@ -630,34 +461,15 @@ int main()
 				continue;
 			}
 
-			if (entity.entity_type == BULLET) {
-
-				entity.velocity += GRAVITY * dt * ball_gravity_scale;
-				entity.position += entity.velocity * dt;
-
-				entity.RunEntityLogic();
-
-				if (CollideWithGround(entity.position, ground)) {
-					entity.isActive = false;
-				}
-			}
 		}
 
 
-		//thing on screen counter
-
-		//elite ball knowledge
-		remaining_targets = std::count_if(all_entities.begin(), all_entities.end(), [](const Entity& e) { return e.entity_type == TARGET && e.isActive; });
-		if (remaining_targets <= 0)
-			game_state = GAME_WIN;
-		
-		balls_on_screen = std::count_if(all_entities.begin(), all_entities.end(), [](const Entity& e) { return e.entity_type == BULLET && e.isActive; });
 
 
 		//handleDrawing of entities using the draw function table
 		for ( Entity& entity : all_entities){
 			if (entity.isActive ) {
-				drawFunctionTable[entity.entity_collider_shape](entity);
+				drawFunctionTable[entity.entity_collider_type](entity);
 				
 			}
 		}
@@ -667,10 +479,6 @@ int main()
 
 
 
-        //Draw Turret
-        DrawRectangleRec(ground, GREEN);
-
-        DrawRectangleRec(platform, DARKGRAY);
 
 		
 		
@@ -690,23 +498,13 @@ int main()
 
 		case GAME_WIN:
 			BeginDrawing();
-			ClearBackground(WHITE);
 
-			DrawText("You Win!", MAX_WINDOW_WIDTH / 2 - MeasureText("You Win!", 20) / 2, MAX_WINDOW_HEIGHT / 2 - 10, 20, BLACK);
-			if (GetClipboardText() != nullptr && GetClipboardText()[0] != '\0')
-			{
-				DrawText("You currently have something in your clipboard. Could it be:", MAX_WINDOW_WIDTH / 2 - MeasureText("You currently have something in your clipboard. Could it be:", 20) / 2, MAX_WINDOW_HEIGHT / 2 + 10, 20, BLACK);
-				DrawText(GetClipboardText(), MAX_WINDOW_WIDTH / 2 - MeasureText(GetClipboardText(), 20) / 2, MAX_WINDOW_HEIGHT / 2 + 30, 20, BLACK);
-			}
 			
 			EndDrawing();
 			break;
 		case GAME_LOSS:
 			BeginDrawing();
 			ClearBackground(WHITE);
-		
-
-			DrawText("You Lose!", MAX_WINDOW_WIDTH / 2 - MeasureText("You Lose!", 20) / 2, MAX_WINDOW_HEIGHT / 2 - 10, 20, BLACK);
 			
 			EndDrawing();
 			break;
