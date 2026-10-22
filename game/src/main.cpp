@@ -329,15 +329,38 @@ void CircleCircleCollision(Entity& circleEntityA, Entity& circleEntityB, Vector2
 			circleEntityA.position = Vector2Add(circleEntityA.position, *mtv);
 			circleEntityB.position = Vector2Subtract(circleEntityB.position, *mtv);
 		}
-		
-		
-
 	}
 }
 void BoxBoxCollision(Entity& boxEntityA, Entity& boxEntityB, Vector2* mtv) {
+
 	if (CheckCollisionRecs(BoxBoundsMath(boxEntityA), BoxBoundsMath(boxEntityB))) {
-		boxEntityA.isActive = false;
-		boxEntityB.isActive = false;
+		if (!boxEntityA.apply_mtv && !boxEntityB.apply_mtv) {
+			boxEntityA.isActive = false;
+			boxEntityB.isActive = false;
+		}
+		else {
+			Vector2 difference = Vector2Subtract(boxEntityA.position, boxEntityB.position);
+
+			float overlapX = (boxEntityA.size.x + boxEntityB.size.x) * 0.5f - fabsf(difference.x);
+			float overlapY = (boxEntityA.size.y + boxEntityB.size.y) * 0.5f - fabsf(difference.y);
+
+			Vector2 correction{};
+
+			if (overlapX < overlapY) {
+				correction.x = difference.x < 0.0f ? -overlapX : overlapX;
+			}
+			else {
+				correction.y = difference.y < 0.0f ? -overlapY : overlapY;
+			}
+
+			if (mtv != nullptr) {
+				*mtv = correction;
+			}
+			Vector2 movement = Vector2Scale(correction, 0.5f);
+			boxEntityA.position = Vector2Add(boxEntityA.position, movement);
+			boxEntityB.position = Vector2Subtract(boxEntityB.position, movement);
+			
+		}
 	}
 }
 
@@ -381,9 +404,7 @@ void CapsuleCircleCollision(Entity& capsuleEntity, Entity& circleEntity, Vector2
 	Vector2 closestPoint = Vector2ProjectPointLine(circleEntity.position, bottom, top);
 	float distanceSquared = Vector2DistanceSqr(circleEntity.position, closestPoint);
 	float radiiSum = circleEntity.radius + capsuleEntity.radius;
-	if (distanceSquared <= radiiSum /**/) {
-
-		
+	if (distanceSquared <= radiiSum * radiiSum) {
 
 		float overlap = radiiSum - distanceSquared;
 		Vector2 mtv_direction = Vector2Normalize(Vector2Subtract(closestPoint, circleEntity.position));
@@ -653,7 +674,7 @@ void SetUpTargets(std::vector<Entity>& targets, int max_targets,int remaining_ta
 }
 
 
-void SwapUSerTestEntity(Entity& user_test_entity) {
+void SwapUserTestEntity(Entity& user_test_entity) {
 	switch (user_test_entity.entity_collider_type) {
 		case CIRCLE:
 			std::cout << "Swapping from CIRCLE to BOX" << std::endl;
@@ -800,12 +821,12 @@ int main()
 			if (IsKeyPressed(KEY_A)) {
 				for (Entity& entity : all_entities) {
 					if (entity.follows_mouse) {
-						SwapUSerTestEntity(entity);
+						SwapUserTestEntity(entity);
 						break;
 					}
 				}
 			}
-
+			//mousePos needs to be done before collisions to avoid clipping
 
 			for (Entity& entity : all_entities) {
 
@@ -813,7 +834,7 @@ int main()
 					continue;
 
 				if (entity.follows_mouse) {
-					entity.position = GetMousePosition();
+					entity.position = GetMousePosition(); 
 					continue;
 				}
 
