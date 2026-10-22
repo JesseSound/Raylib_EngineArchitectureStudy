@@ -126,6 +126,8 @@ void NearestPointsOnLines(Vector2 bot1, Vector2 top1, Vector2 bot2, Vector2 top2
 Rectangle BoxBoundsMath(Entity& boxEntity) {
 	return { boxEntity.position.x - boxEntity.size.x / 2, boxEntity.position.y - boxEntity.size.y / 2, boxEntity.size.x, boxEntity.size.y };
 }
+
+
 void NearestVerticesOnBoxToCapsule(Entity& boxEntity, Entity& capsuleEntity, Vector2* nearestVertex, Vector2* nearestPointOnCapsule) {
 	// Calculate the top and bottom points of the capsule
 	Vector2 top = capsuleEntity.position + capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
@@ -225,13 +227,84 @@ bool CollideWithGround(const Vector2& position, const Rectangle& ground) {
 // Setting Up Function Tables. I 
 
 void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity, Vector2* mtv) {
-	if (!circleEntity.apply_mtv && !boxEntity.apply_mtv) {
-		// MTV logic can be implemented here if needed
 
-		if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
-			circleEntity.isActive = false;
-			boxEntity.isActive = false;
+
+	// Box positions represent their centers.
+	Rectangle box = BoxBoundsMath(boxEntity);
+
+	Vector2 boxMin = { box.x, box.y };
+	Vector2 boxMax = { box.x + box.width, box.y + box.height };
+
+	Vector2 closestPoint = Vector2Clamp(
+		circleEntity.position, boxMin, boxMax
+	);
+
+	Vector2 difference = Vector2Subtract(
+		circleEntity.position, closestPoint
+	);
+
+	float distanceSquared = Vector2LengthSqr(difference);
+	float radius = circleEntity.radius;
+
+	if (distanceSquared > radius * radius) {
+		return;
+	}
+
+	if (!circleEntity.apply_mtv && !boxEntity.apply_mtv) {
+		circleEntity.isActive = false;
+		boxEntity.isActive = false;
+
+	}
+
+	Vector2 direction{};
+	float overlap = 0.0f;
+
+	if (distanceSquared > 0.0f) {
+		float distance = sqrtf(distanceSquared);
+		direction = Vector2Scale(difference, 1.0f / distance);
+		overlap = radius - distance;
+	}
+	else {
+
+		float nearestFace = circleEntity.position.x - boxMin.x;
+		direction = { -1.0f, 0.0f };
+
+		float right = boxMax.x - circleEntity.position.x;
+		if (right < nearestFace) {
+			nearestFace = right;
+			direction = { 1.0f, 0.0f };
 		}
+
+		float top = circleEntity.position.y - boxMin.y;
+		if (top < nearestFace) {
+			nearestFace = top;
+			direction = { 0.0f, -1.0f };
+		}
+
+		float bottom = boxMax.y - circleEntity.position.y;
+		if (bottom < nearestFace) {
+			nearestFace = bottom;
+			direction = { 0.0f, 1.0f };
+		}
+
+		overlap = nearestFace + radius;
+	}
+
+	Vector2 correction = Vector2Scale(direction, overlap);
+
+	if (mtv != nullptr) {
+		*mtv = correction;
+	}
+
+	bool moveBoth = circleEntity.apply_mtv && boxEntity.apply_mtv;
+	Vector2 movement = Vector2Scale(correction, moveBoth ? 0.5f : 1.0f);
+
+	if (circleEntity.apply_mtv) {
+		circleEntity.position = Vector2Add(circleEntity.position, movement);
+	}
+
+	if (boxEntity.apply_mtv) {
+		boxEntity.position = Vector2Subtract(boxEntity.position, movement);
 	}
 }
 void CircleCircleCollision(Entity& circleEntityA, Entity& circleEntityB, Vector2* mtv) {
@@ -279,8 +352,22 @@ void CapsuleCapsuleCollision(Entity& capsuleEntityA, Entity& capsuleEntityB, Vec
 	NearestPointsOnLines(bottomA, topA, bottomB, topB, &np1, &np2);
 	
 	if (CheckCollisionCircles(np1, capsuleEntityA.radius, np2, capsuleEntityB.radius)) {
-		capsuleEntityA.isActive = false;
-		capsuleEntityB.isActive = false;
+		if (capsuleEntityA.apply_mtv && capsuleEntityB.apply_mtv && mtv != nullptr) {
+			Vector2 mtv_direction = Vector2Subtract(np1, np2);
+			if (Vector2Length(mtv_direction) > 0) {
+				mtv_direction = Vector2Normalize(mtv_direction);
+			}
+			float distance = Vector2Distance(np1, np2);
+			float radiiSum = capsuleEntityA.radius + capsuleEntityB.radius;
+			float magnitude = radiiSum - distance;
+			*mtv = Vector2Scale(mtv_direction, magnitude);
+			capsuleEntityA.position = Vector2Add(capsuleEntityA.position, *mtv);
+			capsuleEntityB.position = Vector2Subtract(capsuleEntityB.position, *mtv);
+		}
+		else {
+			capsuleEntityA.isActive = false;
+			capsuleEntityB.isActive = false;
+		}
 	}
 }
 
@@ -293,16 +380,38 @@ void CapsuleCircleCollision(Entity& capsuleEntity, Entity& circleEntity, Vector2
 
 	Vector2 closestPoint = Vector2ProjectPointLine(circleEntity.position, bottom, top);
 	float distanceSquared = Vector2DistanceSqr(circleEntity.position, closestPoint);
-	if (distanceSquared <= (circleEntity.radius + capsuleEntity.radius) * (circleEntity.radius + capsuleEntity.radius)) {
-		circleEntity.isActive = false;
-		capsuleEntity.isActive = false;
+	float radiiSum = circleEntity.radius + capsuleEntity.radius;
+	if (distanceSquared <= radiiSum /**/) {
+
+		
+
+		float overlap = radiiSum - distanceSquared;
+		Vector2 mtv_direction = Vector2Normalize(Vector2Subtract(closestPoint, circleEntity.position));
+		if (!capsuleEntity.apply_mtv && !circleEntity.apply_mtv) {
+			//circleEntity.isActive = false;
+			//capsuleEntity.isActive = false;
+		}
+		else
+		{
+			*mtv = Vector2Scale(mtv_direction, overlap);
+			capsuleEntity.position = Vector2Add(capsuleEntity.position, *mtv);
+			circleEntity.position = Vector2Subtract(circleEntity.position, *mtv);
+		}
 	}
 	
 }
 void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity, Vector2* mtv) {
+
 	if (CheckCapsuleBox(capsuleEntity, boxEntity)) {
-		capsuleEntity.isActive = false;
-		boxEntity.isActive = false;
+		if (!capsuleEntity.apply_mtv && !boxEntity.apply_mtv) {
+			capsuleEntity.isActive = false;
+			boxEntity.isActive = false;
+		}
+		else {
+			Vector2 top = capsuleEntity.position + capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
+
+			Vector2 bottom = capsuleEntity.position - capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
+		}
 	}
 }
 
@@ -317,21 +426,29 @@ void CircleCapsuleCollision(Entity& circleEntity, Entity& capsuleEntity, Vector2
 
 	Vector2 closestPoint = Vector2ProjectPointLine(circleEntity.position, bottom, top);
 	float distanceSquared = Vector2DistanceSqr(circleEntity.position, closestPoint);
-	if (distanceSquared <= (circleEntity.radius + capsuleEntity.radius) * (circleEntity.radius + capsuleEntity.radius)) {
-		circleEntity.isActive = false;
-		capsuleEntity.isActive = false;
+	float radiiSum = circleEntity.radius + capsuleEntity.radius;
+	if (distanceSquared <= radiiSum * radiiSum){
+
+
+
+		float distance = sqrtf(distanceSquared);
+		float overlap = radiiSum - distance;
+		Vector2 mtv_direction = Vector2Normalize(Vector2Subtract(circleEntity.position, closestPoint));
+		if (!capsuleEntity.apply_mtv && !circleEntity.apply_mtv) {
+			circleEntity.isActive = false;
+			capsuleEntity.isActive = false;
+		}
+		else
+		{
+			*mtv = Vector2Scale(mtv_direction, overlap);
+			capsuleEntity.position = Vector2Subtract(capsuleEntity.position, *mtv);
+			circleEntity.position = Vector2Add(circleEntity.position, *mtv);
+		}
 	}
 }
 
 void BoxCircleCollision(Entity& boxEntity, Entity& circleEntity, Vector2* mtv) {
-	if (!boxEntity.apply_mtv && !circleEntity.apply_mtv) {
-		// MTV logic can be implemented here if needed
-
-		if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
-			boxEntity.isActive = false;
-			circleEntity.isActive = false;
-		}
-	}
+	CircleBoxCollision(circleEntity, boxEntity, mtv);
 }
 void HitTestNone(Entity& entityA, Entity& entityB, Vector2* mtv) {
 	// No collision logic for NONE shape
@@ -523,11 +640,23 @@ int main()
 		user_test_entity.capsule_half_length = 30.0f;
 		user_test_entity.capsule_length = 60.0f;
 		user_test_entity.size = { 40.0f, 40.0f };
-	
+		user_test_entity.name = "SmileyUser";
 	all_entities.push_back(user_test_entity);
 			
-
-
+	Entity TestCapsuleEntity;
+	TestCapsuleEntity.position = { 600.0f, 400.0f };
+	TestCapsuleEntity.radius = 15.0f;
+	TestCapsuleEntity.color = PURPLE;
+	TestCapsuleEntity.entity_collider_type = CAPSULE;
+	TestCapsuleEntity.entity_type = PILL;
+	TestCapsuleEntity.isActive = true;
+	TestCapsuleEntity.follows_mouse = false;
+	TestCapsuleEntity.apply_mtv = true;
+	TestCapsuleEntity.capsule_direction = Vector2Normalize({ 0.0f, 1.0f });
+	TestCapsuleEntity.name = "Im Not a Weiner";
+	TestCapsuleEntity.capsule_length = 80.0f;	
+	TestCapsuleEntity.capsule_half_length = TestCapsuleEntity.capsule_length / 2.0f;
+	all_entities.push_back(TestCapsuleEntity);
 
     while (!WindowShouldClose())
     {
@@ -547,7 +676,6 @@ int main()
 			
 
 			
-
 
 
 
