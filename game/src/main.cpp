@@ -45,6 +45,10 @@ struct Entity {
 	float capsule_half_length = 0.0f;
 	float capsule_length = 0.0f;
 	bool follows_mouse = false;
+	std::string name{};
+	bool apply_mtv = false;
+
+
 	void OutOfBounds(const Vector2& position) {
 		bool CheckPosition = (position.x < 0 || position.x > MAX_WINDOW_WIDTH || position.y < 0 || position.y > MAX_WINDOW_HEIGHT);
 		if (CheckPosition) {
@@ -221,15 +225,40 @@ bool CollideWithGround(const Vector2& position, const Rectangle& ground) {
 // Setting Up Function Tables. I 
 
 void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity, Vector2* mtv) {
-	if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
-		circleEntity.isActive = false;
-		boxEntity.isActive = false;
+	if (!circleEntity.apply_mtv && !boxEntity.apply_mtv) {
+		// MTV logic can be implemented here if needed
+
+		if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
+			circleEntity.isActive = false;
+			boxEntity.isActive = false;
+		}
 	}
 }
 void CircleCircleCollision(Entity& circleEntityA, Entity& circleEntityB, Vector2* mtv) {
-	if (CheckCollisionCircles(circleEntityA.position, circleEntityA.radius, circleEntityB.position, circleEntityB.radius)) {
-		circleEntityA.isActive = false;
-		circleEntityB.isActive = false;
+	if (!circleEntityA.apply_mtv && !circleEntityB.apply_mtv) {
+		
+		if (CheckCollisionCircles(circleEntityA.position, circleEntityA.radius, circleEntityB.position, circleEntityB.radius)) {
+			circleEntityA.isActive = false;
+			circleEntityB.isActive = false;
+		}
+		
+	} else{ 
+		float distance = Vector2Distance(circleEntityA.position, circleEntityB.position);
+		float radiiSum = circleEntityA.radius + circleEntityB.radius;
+		Vector2 mtv_direction = Vector2Subtract(circleEntityA.position, circleEntityB.position);
+		if (Vector2Length(mtv_direction) > 0) {
+			mtv_direction = Vector2Normalize(mtv_direction);
+		}
+		float magnitude = radiiSum - distance;
+		bool collision = distance < radiiSum;
+		if (collision && mtv != nullptr) {
+			*mtv = Vector2Scale(mtv_direction, magnitude);
+			circleEntityA.position = Vector2Add(circleEntityA.position, *mtv);
+			circleEntityB.position = Vector2Subtract(circleEntityB.position, *mtv);
+		}
+		
+		
+
 	}
 }
 void BoxBoxCollision(Entity& boxEntityA, Entity& boxEntityB, Vector2* mtv) {
@@ -295,9 +324,13 @@ void CircleCapsuleCollision(Entity& circleEntity, Entity& capsuleEntity, Vector2
 }
 
 void BoxCircleCollision(Entity& boxEntity, Entity& circleEntity, Vector2* mtv) {
-	if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
-		boxEntity.isActive = false;
-		circleEntity.isActive = false;
+	if (!boxEntity.apply_mtv && !circleEntity.apply_mtv) {
+		// MTV logic can be implemented here if needed
+
+		if (CheckCollisionCircleRec(circleEntity.position, circleEntity.radius, BoxBoundsMath(boxEntity))) {
+			boxEntity.isActive = false;
+			circleEntity.isActive = false;
+		}
 	}
 }
 void HitTestNone(Entity& entityA, Entity& entityB, Vector2* mtv) {
@@ -394,23 +427,105 @@ void SetUpTargets(std::vector<Entity>& targets, int max_targets,int remaining_ta
 	}
 }
 
+
+void SwapUSerTestEntity(Entity& user_test_entity) {
+	switch (user_test_entity.entity_collider_type) {
+		case CIRCLE:
+			std::cout << "Swapping from CIRCLE to BOX" << std::endl;
+			user_test_entity.entity_collider_type = BOX; // Replace with actual logic to find the user test entity
+			break;
+		case BOX:
+			user_test_entity.entity_collider_type = CAPSULE; // Replace with actual logic to find the user test entity
+			break;
+		case CAPSULE:
+			user_test_entity.entity_collider_type = CIRCLE; // Replace with actual logic to find the user test entity
+			break;
+	}
+	switch (user_test_entity.entity_type) {
+	case BULLET:
+		user_test_entity.entity_type = TARGET; // Replace with actual logic to find the user test entity
+		break;
+	case TARGET:
+		user_test_entity.entity_type = PILL; // Replace with actual logic to find the user test entity
+		break;
+	case PILL:
+		user_test_entity.entity_type = BULLET; // Replace with actual logic to find the user test entity
+		break;
+	}
+}
+
+
 int main()
 {
 	SetupCalls();
 
 
     
-    
+	std::vector<std::string> names = {
+	"Alex",
+	"Jordan",
+	"Taylor",
+	"Morgan",
+	"Casey",
+	"Riley",
+	"Cameron",
+	"Dylan",
+	"Avery",
+	"Logan",
+	"Parker",
+	"Quinn",
+	"Blake",
+	"Reese",
+	"Jamie",
+	"Skyler",
+	"Charlie",
+	"Dakota",
+	"Rowan",
+	"Finley"
+	};
 
 	std::vector<Entity> all_entities;
+	all_entities.resize(11);
 
+	for (size_t i = 0; i < all_entities.size(); i++)
+	{
+		Entity& target = all_entities[i];
+		target.entity_type = TARGET;
+		target.position.x = 150.0f + i * 50.0f;
+		target.position.y = (50.0f + 50 * (i < 5 ? 10 - i : i));
+
+		target.entity_collider_type = i % 2 == 0 ? CIRCLE : BOX;
+		target.size = Vector2Ones * BALL_RADIUS;
+		target.radius = BALL_RADIUS;
+		target.isActive = true;
+		target.color = RED;
+		target.apply_mtv = true;
+		target.name = names[i % names.size()]; 
+	}
 
 	//GameState
 	GameState game_state = MAIN;
 
-
-
-
+	//LMFAO Moment I realized I drifted too far from what youve been teaching this semester.
+	//If you dock marks for this crap I can't even be mad
+	//is it better to write bad code and learn from it or write good code and not learn anything? 
+	//probably better to just not write code at midnight.
+		Entity user_test_entity;
+		user_test_entity.position = { 400.0f, 400.0f };
+		user_test_entity.radius = 20.0f;
+		user_test_entity.color = GREEN;
+		user_test_entity.entity_collider_type = CIRCLE;
+		user_test_entity.entity_type = BULLET;
+		user_test_entity.isActive = true;
+		user_test_entity.follows_mouse = true;
+		user_test_entity.apply_mtv = true;
+		user_test_entity.capsule_direction = Vector2Normalize({ 1.0f, 1.0f });
+		user_test_entity.capsule_half_length = 30.0f;
+		user_test_entity.capsule_length = 60.0f;
+		user_test_entity.size = { 40.0f, 40.0f };
+	
+	all_entities.push_back(user_test_entity);
+			
 
 
 
@@ -434,6 +549,31 @@ int main()
 			
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+			if (IsKeyPressed(KEY_A)) {
+				for (Entity& entity : all_entities) {
+					if (entity.follows_mouse) {
+						SwapUSerTestEntity(entity);
+						break;
+					}
+				}
+			}
+
+
+
+
+
 		//collision checking
 		for (int i = 0; i < all_entities.size(); ++i) {
 			Entity& entityA = all_entities[i];
@@ -441,9 +581,10 @@ int main()
 			for (int j = i + 1; j < all_entities.size(); ++j) {
 				Entity& entityB = all_entities[j];
 				if (!entityB.isActive) continue;
+				Vector2 mtv = Vector2Zeros;
 				CollisionFunc collisionFunc = collisionFunctionTable[entityA.entity_collider_type][entityB.entity_collider_type];
 				if (collisionFunc) {
-					collisionFunc(entityA, entityB, nullptr);
+					collisionFunc(entityA, entityB, &mtv);
 				}
 
 				if (!entityA.isActive) break;
@@ -470,7 +611,7 @@ int main()
 		for ( Entity& entity : all_entities){
 			if (entity.isActive ) {
 				drawFunctionTable[entity.entity_collider_type](entity);
-				
+				DrawText(TextFormat("%s", entity.name.c_str()), entity.position.x - 20, entity.position.y - 20, 10, BLACK);
 			}
 		}
 
