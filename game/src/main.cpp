@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <vector>
 #include <iostream>
+
+
+
 #define MAX_WINDOW_HEIGHT 800
 #define MAX_WINDOW_WIDTH 800    
 #define MAX_FPS 60
@@ -161,10 +164,6 @@ void NearestVerticesOnBoxToCapsule(Entity& boxEntity, Entity& capsuleEntity, Vec
 		}
 	}
 
-	
-
-
-
 }
 
 //seperated due to length
@@ -228,7 +227,11 @@ bool CollideWithGround(const Vector2& position, const Rectangle& ground) {
 
 void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity, Vector2* mtv) {
 
-
+	if (!circleEntity.apply_mtv && !boxEntity.apply_mtv) {
+		circleEntity.isActive = false;
+		boxEntity.isActive = false;
+		return;
+	}
 	// Box positions represent their centers.
 	Rectangle box = BoxBoundsMath(boxEntity);
 
@@ -250,11 +253,7 @@ void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity, Vector2* mtv) {
 		return;
 	}
 
-	if (!circleEntity.apply_mtv && !boxEntity.apply_mtv) {
-		circleEntity.isActive = false;
-		boxEntity.isActive = false;
 
-	}
 
 	Vector2 direction{};
 	float overlap = 0.0f;
@@ -300,11 +299,11 @@ void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity, Vector2* mtv) {
 	Vector2 movement = Vector2Scale(correction, moveBoth ? 0.5f : 1.0f);
 
 	if (circleEntity.apply_mtv) {
-		circleEntity.position = Vector2Add(circleEntity.position, movement);
+		circleEntity.position = circleEntity.position + movement; 
 	}
 
 	if (boxEntity.apply_mtv) {
-		boxEntity.position = Vector2Subtract(boxEntity.position, movement);
+		boxEntity.position = boxEntity.position - movement;
 	}
 }
 void CircleCircleCollision(Entity& circleEntityA, Entity& circleEntityB, Vector2* mtv) {
@@ -428,6 +427,7 @@ void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity, Vector2* mtv)
 		if (!capsuleEntity.apply_mtv && !boxEntity.apply_mtv) {
 			capsuleEntity.isActive = false;
 			boxEntity.isActive = false;
+			return;
 		}
 		else {
 			Vector2 top = capsuleEntity.position + capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
@@ -701,6 +701,17 @@ void SwapUserTestEntity(Entity& user_test_entity) {
 }
 
 
+struct GUIButtons {
+	std::string button_text{};
+	float width{};
+	float height{};
+	Vector2 size{};
+	Vector2 position;
+	Rectangle box{};
+};
+
+
+
 int main()
 {
 	SetupCalls();
@@ -730,24 +741,22 @@ int main()
 	"Finley"
 	};
 
+	std::vector<std::string> button_texts = {
+		"None A",
+		"Circle A",
+		"Box A",
+		"Capsule A",
+		"None B",
+		"Circle B",
+		"Box B",
+		"Capsule B"
+
+	};
+
 	std::vector<Entity> all_entities;
 	all_entities.resize(11);
 
-	for (size_t i = 0; i < all_entities.size(); i++)
-	{
-		Entity& target = all_entities[i];
-		target.entity_type = TARGET;
-		target.position.x = 150.0f + i * 50.0f;
-		target.position.y = (50.0f + 50 * (i < 5 ? 10 - i : i));
 
-		target.entity_collider_type = i % 2 == 0 ? CIRCLE : BOX;
-		target.size = Vector2Ones * BALL_RADIUS;
-		target.radius = BALL_RADIUS;
-		target.isActive = true;
-		target.color = RED;
-		target.apply_mtv = true;
-		target.name = names[i % names.size()]; 
-	}
 
 	//GameState
 	GameState game_state = MAIN;
@@ -756,7 +765,7 @@ int main()
 	//If you dock marks for this crap I can't even be mad
 	//is it better to write bad code and learn from it or write good code and not learn anything? 
 	//probably better to just not write code at midnight.
-		Entity user_test_entity;
+	Entity user_test_entity;
 		user_test_entity.position = { 400.0f, 400.0f };
 		user_test_entity.radius = 20.0f;
 		user_test_entity.color = GREEN;
@@ -772,20 +781,20 @@ int main()
 		user_test_entity.name = "SmileyUser";
 	all_entities.push_back(user_test_entity);
 			
-	Entity TestCapsuleEntity;
-	TestCapsuleEntity.position = { 600.0f, 400.0f };
-	TestCapsuleEntity.radius = 15.0f;
-	TestCapsuleEntity.color = PURPLE;
-	TestCapsuleEntity.entity_collider_type = CAPSULE;
-	TestCapsuleEntity.entity_type = PILL;
-	TestCapsuleEntity.isActive = true;
-	TestCapsuleEntity.follows_mouse = false;
-	TestCapsuleEntity.apply_mtv = true;
-	TestCapsuleEntity.capsule_direction = Vector2Normalize({ 0.0f, 1.0f });
-	TestCapsuleEntity.name = "Im Not a Weiner";
-	TestCapsuleEntity.capsule_length = 80.0f;	
-	TestCapsuleEntity.capsule_half_length = TestCapsuleEntity.capsule_length / 2.0f;
-	all_entities.push_back(TestCapsuleEntity);
+
+	std::vector<GUIButtons> all_buttons;
+	all_buttons.resize(8);
+
+	for (int i = 0; i < all_buttons.size(); i++) {
+		GUIButtons& newButton = all_buttons[i];
+		newButton.button_text = button_texts[i];
+		newButton.height = 30.0f;
+		newButton.width = 60.0f;
+		newButton.position = { 20.0f + (i * 80), 20.0f };
+		newButton.size = { newButton.width, newButton.height };
+		newButton.box = { newButton.position.x,newButton.position.y, newButton.size.x, newButton.size.y };
+
+	}
 
     while (!WindowShouldClose())
     {
@@ -793,7 +802,7 @@ int main()
 		switch (game_state)
 		{
 		case MAIN:
-
+			
 			
 			
 
@@ -804,16 +813,10 @@ int main()
 			ClearBackground(WHITE);
 			
 
+
+
 			
-
-
-
-
-
-
-
-
-
+			
 
 
 
@@ -859,7 +862,7 @@ int main()
 		}
 
 
-
+		
 
 
 
@@ -872,22 +875,20 @@ int main()
 			}
 		}
 
+
+
+		for (GUIButtons& buttons : all_buttons) {
+			GuiButton(buttons.box, buttons.button_text.c_str());
+		}
+
+
+
+
 		std::erase_if(all_entities, [](const Entity& e) { return !e.isActive; });
 
-
-
-
-
 		
-		
-
-
 
         EndDrawing();
-
-
-		
-
 
 
 		break;
