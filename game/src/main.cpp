@@ -402,6 +402,7 @@ void CapsuleCircleCollision(Entity& capsuleEntity, Entity& circleEntity, Vector2
 }
 void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity, Vector2* mtv) {
 
+	
 	if (CheckCapsuleBox(capsuleEntity, boxEntity)) {
 		if (!capsuleEntity.apply_mtv && !boxEntity.apply_mtv) {
 			capsuleEntity.isActive = false;
@@ -409,8 +410,115 @@ void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity, Vector2* mtv)
 		}
 		else {
 			Vector2 top = capsuleEntity.position + capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
-
 			Vector2 bottom = capsuleEntity.position - capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
+
+			Rectangle box = BoxBoundsMath(boxEntity);
+			Vector2 boxMin = { box.x, box.y };
+			Vector2 boxMax = { box.x + box.width, box.y + box.height };
+
+			bool insideBox = CheckCollisionPointRec(top, box) || CheckCollisionPointRec(bottom, box);
+
+			Vector2 corners[4] = {
+				{ boxMin.x, boxMin.y },
+				{ boxMax.x, boxMin.y },
+				{ boxMax.x, boxMax.y },
+				{ boxMin.x, boxMax.y }
+			};
+
+			for (int i = 0; i < 4; i++) {
+				Vector2 intersection{};
+
+				if (CheckCollisionLines(bottom, top, corners[i], corners[(i + 1) % 4], &intersection)) {
+					insideBox = true;
+					break;
+				}
+			}
+
+			Vector2 correction{};
+
+			if (insideBox) {
+				// Find the outside edges of the capsule.
+				float capsuleLeft = std::min(top.x, bottom.x) - capsuleEntity.radius;
+				float capsuleRight = std::max(top.x, bottom.x) + capsuleEntity.radius;
+				float capsuleTop = std::min(top.y, bottom.y) - capsuleEntity.radius;
+				float capsuleBottom = std::max(top.y, bottom.y) + capsuleEntity.radius;
+
+				// Find the shortest push out through a box side.
+				float overlap = capsuleRight - boxMin.x;
+				Vector2 direction = { -1.0f, 0.0f };
+
+				float right = boxMax.x - capsuleLeft;
+				if (right < overlap) {
+					overlap = right;
+					direction = { 1.0f, 0.0f };
+				}
+
+				float up = capsuleBottom - boxMin.y;
+				if (up < overlap) {
+					overlap = up;
+					direction = { 0.0f, -1.0f };
+				}
+
+				float down = boxMax.y - capsuleTop;
+				if (down < overlap) {
+					overlap = down;
+					direction = { 0.0f, 1.0f };
+				}
+
+				correction = Vector2Scale(direction, overlap);
+			}
+			else {
+				Vector2 nearestBoxPoint{};
+				Vector2 nearestCapsulePoint{};
+
+				NearestVerticesOnBoxToCapsule(boxEntity, capsuleEntity, &nearestBoxPoint, &nearestCapsulePoint);
+
+				float minDistanceSqrd = Vector2DistanceSqr(nearestBoxPoint, nearestCapsulePoint);
+
+				// Compare the top against the box
+				Vector2 closestTop = Vector2Clamp(top, boxMin, boxMax);
+				float topDistanceSquared = Vector2DistanceSqr(top, closestTop);
+
+				if (topDistanceSquared < minDistanceSqrd) {
+					minDistanceSqrd = topDistanceSquared;
+					nearestBoxPoint = closestTop;
+					nearestCapsulePoint = top;
+				}
+
+				// Compare the bottom against the box
+				Vector2 closestBottom = Vector2Clamp(bottom, boxMin, boxMax);
+				float bottomDistanceSquared = Vector2DistanceSqr(bottom, closestBottom);
+
+				if (bottomDistanceSquared < minDistanceSqrd) {
+					minDistanceSqrd = bottomDistanceSquared;
+					nearestBoxPoint = closestBottom;
+					nearestCapsulePoint = bottom;
+				}
+
+				if (minDistanceSqrd <= 0.0f) {
+					return;
+				}
+
+				float distance = sqrtf(minDistanceSqrd);
+				float overlap = capsuleEntity.radius - distance;
+
+				if (overlap <= 0.0f) {
+					return;
+				}
+
+				Vector2 direction = Vector2Scale(Vector2Subtract(nearestCapsulePoint, nearestBoxPoint), 1.0f / distance);
+				correction = Vector2Scale(direction, overlap);
+			}
+
+			//if i dont wrap it I get a "de-referencing nullptr" error??? 
+			//wrap it before you tap it
+			if (mtv != nullptr) {
+				*mtv = correction;
+			}
+				Vector2 movement = Vector2Scale(correction, 0.5f);
+				capsuleEntity.position = Vector2Add(capsuleEntity.position, movement);
+				boxEntity.position = Vector2Subtract(boxEntity.position, movement);
+			
 		}
 	}
 }
@@ -699,7 +807,17 @@ int main()
 			}
 
 
+			for (Entity& entity : all_entities) {
 
+				if (!entity.isActive)
+					continue;
+
+				if (entity.follows_mouse) {
+					entity.position = GetMousePosition();
+					continue;
+				}
+
+			}
 
 
 		//collision checking
@@ -720,17 +838,7 @@ int main()
 		}
 
 
-		for (Entity& entity : all_entities) {
 
-			if (!entity.isActive)
-				continue;
-
-			if (entity.follows_mouse) {
-				entity.position = GetMousePosition();
-				continue;
-			}
-
-		}
 
 
 
