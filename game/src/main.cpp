@@ -674,30 +674,15 @@ void SetUpTargets(std::vector<Entity>& targets, int max_targets,int remaining_ta
 }
 
 
-void SwapUserTestEntity(Entity& user_test_entity) {
-	switch (user_test_entity.entity_collider_type) {
-		case CIRCLE:
-			std::cout << "Swapping from CIRCLE to BOX" << std::endl;
-			user_test_entity.entity_collider_type = BOX; // Replace with actual logic to find the user test entity
-			break;
-		case BOX:
-			user_test_entity.entity_collider_type = CAPSULE; // Replace with actual logic to find the user test entity
-			break;
-		case CAPSULE:
-			user_test_entity.entity_collider_type = CIRCLE; // Replace with actual logic to find the user test entity
-			break;
+void SwapUserTestEntity(Entity& user_test_entity, Collider new_collider = NONE_SHAPE) { //auto define as none_shape so we never face issues lol
+
+	if (new_collider == NONE_SHAPE) {
+		std::cout << "Not a valid Option";
 	}
-	switch (user_test_entity.entity_type) {
-	case BULLET:
-		user_test_entity.entity_type = TARGET; // Replace with actual logic to find the user test entity
-		break;
-	case TARGET:
-		user_test_entity.entity_type = PILL; // Replace with actual logic to find the user test entity
-		break;
-	case PILL:
-		user_test_entity.entity_type = BULLET; // Replace with actual logic to find the user test entity
-		break;
+	else {
+		user_test_entity.entity_collider_type = new_collider;
 	}
+
 }
 
 
@@ -705,13 +690,20 @@ struct GUIButtons {
 	std::string button_text{};
 	float width{};
 	float height{};
+	int array_pointer{};
 	Vector2 size{};
 	Vector2 position{};
 	Rectangle box{};
 	Collider collider_to_use{}; //assignment 1 specific but will be using some elite ball knowledge in a moment
+	int gui_state = 0; // based on rayGUI
 };
 
-
+/*typedef enum {
+	STATE_NORMAL = 0,
+	STATE_FOCUSED,
+	STATE_PRESSED,
+	STATE_DISABLED
+} GuiState;*/
 
 int main()
 {
@@ -779,6 +771,8 @@ int main()
 			
 
 	std::vector<GUIButtons> all_buttons;
+	std::vector<GUIButtons> top_row;
+	std::vector<GUIButtons> bot_row;
 	all_buttons.resize(8);
 
 	for (int i = 0; i < all_buttons.size(); i++) {
@@ -790,7 +784,7 @@ int main()
 			newButton.position = { 100.0f + (i * 160), 20.0f };
 			newButton.collider_to_use = (Collider)i;
 			append_letter = " A";
-			
+			top_row.push_back(newButton);
 		}
 		else {
 			newButton.position = { 100.0f + ((i-4) * 160), 100.0f };
@@ -801,7 +795,13 @@ int main()
 		
 		newButton.size = { newButton.width, newButton.height };
 		newButton.box = { newButton.position.x,newButton.position.y, newButton.size.x, newButton.size.y };
-
+		newButton.array_pointer = i; //I might use this later, not sure
+		if (i < 4) { //bad coding but last minute decision
+			top_row.push_back(newButton);
+		}
+		else {
+			bot_row.push_back(newButton);
+		}
 	}
 
     while (!WindowShouldClose())
@@ -825,14 +825,7 @@ int main()
 
 
 
-			if (IsKeyPressed(KEY_A)) {
-				for (Entity& entity : all_entities) {
-					if (entity.follows_mouse) {
-						SwapUserTestEntity(entity);
-						break;
-					}
-				}
-			}
+			
 			//mousePos needs to be done before collisions to avoid clipping
 
 			for (Entity& entity : all_entities) {
@@ -880,11 +873,26 @@ int main()
 		}
 
 
-
-		for (GUIButtons& buttons : all_buttons) {
-			GuiButton(buttons.box, buttons.button_text.c_str());
+		//starting to feel less like elite ball knowledge
+		for (GUIButtons& buttons : top_row) {
+			GuiSetState(buttons.gui_state);
+			if (GuiButton(buttons.box, buttons.button_text.c_str())) {
+				//I call it "other" but really im just resetting everything lol
+				for (GUIButtons& other : top_row) { 
+					other.gui_state = STATE_NORMAL;
+				}
+				buttons.gui_state = STATE_PRESSED;
+			};
 		}
-
+		for (GUIButtons& buttons : bot_row) {
+			GuiSetState(buttons.gui_state);
+			if (GuiButton(buttons.box, buttons.button_text.c_str())) {
+				for (GUIButtons& other : bot_row) {
+					other.gui_state = STATE_NORMAL;
+				}
+				buttons.gui_state = STATE_PRESSED;
+			};
+		}
 
 
 
