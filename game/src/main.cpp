@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <vector>
 #include <iostream>
-
+#include <map>
 
 
 #define MAX_WINDOW_HEIGHT 800
@@ -708,6 +708,7 @@ struct GUIButtons {
 	Vector2 size{};
 	Vector2 position{};
 	Rectangle box{};
+	Collider collider_to_use{}; //assignment 1 specific but will be using some elite ball knowledge in a moment
 };
 
 
@@ -741,16 +742,12 @@ int main()
 	"Finley"
 	};
 
-	std::vector<std::string> button_texts = {
-		"None A",
-		"Circle A",
-		"Box A",
-		"Capsule A",
-		"None B",
-		"Circle B",
-		"Box B",
-		"Capsule B"
-	};
+
+
+	// map because Elite Ball Knowledge
+	//That Ball knowledge being how much you hate maps
+	std::map<Collider, std::string> collider_to_map = { {NONE_SHAPE, "None"}, {CIRCLE, "Circle"}, {BOX, "Box"}, { CAPSULE, "Capsule" } };
+
 
 	std::vector<Entity> all_entities;
 	all_entities.resize(11);
@@ -786,16 +783,22 @@ int main()
 
 	for (int i = 0; i < all_buttons.size(); i++) {
 		GUIButtons& newButton = all_buttons[i];
-		newButton.button_text = button_texts[i];
-		newButton.height = 30.0f;
-		newButton.width = 60.0f;
+		std::string append_letter{};
+		newButton.height = 80.0f;
+		newButton.width = 120.0f;
 		if (i < 4) {
-			newButton.position = { 20.0f + (i * 80), 20.0f };
+			newButton.position = { 100.0f + (i * 160), 20.0f };
+			newButton.collider_to_use = (Collider)i;
+			append_letter = " A";
+			
 		}
 		else {
-			newButton.position = { 20.0f + ((i-4) * 80), 60.0f };
+			newButton.position = { 100.0f + ((i-4) * 160), 100.0f };
+			newButton.collider_to_use = (Collider)(i-4);
+			append_letter = " B";
 		}
-
+		newButton.button_text = collider_to_map[newButton.collider_to_use] + append_letter;
+		
 		newButton.size = { newButton.width, newButton.height };
 		newButton.box = { newButton.position.x,newButton.position.y, newButton.size.x, newButton.size.y };
 
