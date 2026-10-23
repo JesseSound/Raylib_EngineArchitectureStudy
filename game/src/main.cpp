@@ -296,7 +296,7 @@ void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity, Vector2* mtv) {
 	}
 
 	bool moveBoth = circleEntity.apply_mtv && boxEntity.apply_mtv;
-	Vector2 movement = Vector2Scale(correction, moveBoth ? 0.5f : 1.0f);
+	Vector2 movement = Vector2Scale(correction,  1.0f);
 
 	if (circleEntity.apply_mtv) {
 		circleEntity.position = circleEntity.position + movement; 
@@ -325,8 +325,8 @@ void CircleCircleCollision(Entity& circleEntityA, Entity& circleEntityB, Vector2
 		bool collision = distance < radiiSum;
 		if (collision && mtv != nullptr) {
 			*mtv = Vector2Scale(mtv_direction, magnitude);
-			circleEntityA.position = Vector2Add(circleEntityA.position, *mtv);
-			circleEntityB.position = Vector2Subtract(circleEntityB.position, *mtv);
+			circleEntityA.position = circleEntityA.position + *mtv;
+			circleEntityB.position = circleEntityB.position - *mtv;
 		}
 	}
 }
@@ -355,9 +355,9 @@ void BoxBoxCollision(Entity& boxEntityA, Entity& boxEntityB, Vector2* mtv) {
 			if (mtv != nullptr) {
 				*mtv = correction;
 			}
-			Vector2 movement = Vector2Scale(correction, 0.5f);
-			boxEntityA.position = Vector2Add(boxEntityA.position, movement);
-			boxEntityB.position = Vector2Subtract(boxEntityB.position, movement);
+			Vector2 movement = Vector2Scale(correction, 1.0f);
+			boxEntityA.position = boxEntityA.position + movement;
+			boxEntityB.position = boxEntityB.position- movement;
 			
 		}
 	}
@@ -375,7 +375,7 @@ void CapsuleCapsuleCollision(Entity& capsuleEntityA, Entity& capsuleEntityB, Vec
 	
 	if (CheckCollisionCircles(np1, capsuleEntityA.radius, np2, capsuleEntityB.radius)) {
 		if (capsuleEntityA.apply_mtv && capsuleEntityB.apply_mtv && mtv != nullptr) {
-			Vector2 mtv_direction = Vector2Subtract(np1, np2);
+			Vector2 mtv_direction = np1 - np2;
 			if (Vector2Length(mtv_direction) > 0) {
 				mtv_direction = Vector2Normalize(mtv_direction);
 			}
@@ -383,8 +383,8 @@ void CapsuleCapsuleCollision(Entity& capsuleEntityA, Entity& capsuleEntityB, Vec
 			float radiiSum = capsuleEntityA.radius + capsuleEntityB.radius;
 			float magnitude = radiiSum - distance;
 			*mtv = Vector2Scale(mtv_direction, magnitude);
-			capsuleEntityA.position = Vector2Add(capsuleEntityA.position, *mtv);
-			capsuleEntityB.position = Vector2Subtract(capsuleEntityB.position, *mtv);
+			capsuleEntityA.position = capsuleEntityA.position + *mtv;
+			capsuleEntityB.position = capsuleEntityB.position- *mtv;
 		}
 		else {
 			capsuleEntityA.isActive = false;
@@ -394,32 +394,7 @@ void CapsuleCapsuleCollision(Entity& capsuleEntityA, Entity& capsuleEntityB, Vec
 }
 
 
-void CapsuleCircleCollision(Entity& capsuleEntity, Entity& circleEntity, Vector2* mtv) {
-	//1)
-	Vector2 top = capsuleEntity.position + capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
-	//2)
-	Vector2 bottom = capsuleEntity.position - capsuleEntity.capsule_direction * capsuleEntity.capsule_half_length;
 
-	Vector2 closestPoint = Vector2ProjectPointLine(circleEntity.position, bottom, top);
-	float distanceSquared = Vector2DistanceSqr(circleEntity.position, closestPoint);
-	float radiiSum = circleEntity.radius + capsuleEntity.radius;
-	if (distanceSquared <= radiiSum * radiiSum) {
-
-		float overlap = radiiSum - distanceSquared;
-		Vector2 mtv_direction = Vector2Normalize(Vector2Subtract(closestPoint, circleEntity.position));
-		if (!capsuleEntity.apply_mtv && !circleEntity.apply_mtv) {
-			//circleEntity.isActive = false;
-			//capsuleEntity.isActive = false;
-		}
-		else
-		{
-			*mtv = Vector2Scale(mtv_direction, overlap);
-			capsuleEntity.position = Vector2Add(capsuleEntity.position, *mtv);
-			circleEntity.position = Vector2Subtract(circleEntity.position, *mtv);
-		}
-	}
-	
-}
 void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity, Vector2* mtv) {
 
 	
@@ -527,7 +502,7 @@ void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity, Vector2* mtv)
 					return;
 				}
 
-				Vector2 direction = Vector2Scale(Vector2Subtract(nearestCapsulePoint, nearestBoxPoint), 1.0f / distance);
+				Vector2 direction = Vector2Scale(nearestCapsulePoint - nearestBoxPoint, 1.0f / distance);
 				correction = Vector2Scale(direction, overlap);
 			}
 
@@ -537,8 +512,8 @@ void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity, Vector2* mtv)
 				*mtv = correction;
 			}
 				Vector2 movement = Vector2Scale(correction, 0.5f);
-				capsuleEntity.position = Vector2Add(capsuleEntity.position, movement);
-				boxEntity.position = Vector2Subtract(boxEntity.position, movement);
+				capsuleEntity.position = capsuleEntity.position + movement;
+				boxEntity.position = boxEntity.position - movement;
 			
 		}
 	}
@@ -570,12 +545,14 @@ void CircleCapsuleCollision(Entity& circleEntity, Entity& capsuleEntity, Vector2
 		else
 		{
 			*mtv = Vector2Scale(mtv_direction, overlap);
-			capsuleEntity.position = Vector2Subtract(capsuleEntity.position, *mtv);
-			circleEntity.position = Vector2Add(circleEntity.position, *mtv);
+			capsuleEntity.position = capsuleEntity.position - *mtv;
+			circleEntity.position = circleEntity.position+ *mtv;
 		}
 	}
 }
-
+void CapsuleCircleCollision(Entity& capsuleEntity, Entity& circleEntity, Vector2* mtv) {
+	CircleCapsuleCollision(circleEntity, capsuleEntity, mtv);
+}
 void BoxCircleCollision(Entity& boxEntity, Entity& circleEntity, Vector2* mtv) {
 	CircleBoxCollision(circleEntity, boxEntity, mtv);
 }
@@ -674,14 +651,15 @@ void SetUpTargets(std::vector<Entity>& targets, int max_targets,int remaining_ta
 }
 
 
-void SwapUserTestEntity(Entity& user_test_entity, Collider new_collider = NONE_SHAPE) { //auto define as none_shape so we never face issues lol
+void SwapTestEntity(Entity& test_entity, Collider new_collider = NONE_SHAPE) { //auto define as none_shape so we never face issues lol
 
-	if (new_collider == NONE_SHAPE) {
+	/*if (new_collider == NONE_SHAPE) {
 		std::cout << "Not a valid Option";
 	}
-	else {
-		user_test_entity.entity_collider_type = new_collider;
-	}
+	else {*/
+		test_entity.entity_collider_type = new_collider;
+		std::cout << test_entity.entity_collider_type;
+	//}
 
 }
 
@@ -742,7 +720,7 @@ int main()
 
 
 	std::vector<Entity> all_entities;
-	all_entities.resize(11);
+	
 
 
 
@@ -753,11 +731,18 @@ int main()
 	//If you dock marks for this crap I can't even be mad
 	//is it better to write bad code and learn from it or write good code and not learn anything? 
 	//probably better to just not write code at midnight.
+
+
+
+
+
+
+	
 	Entity user_test_entity;
 		user_test_entity.position = { 400.0f, 400.0f };
 		user_test_entity.radius = 20.0f;
 		user_test_entity.color = GREEN;
-		user_test_entity.entity_collider_type = CIRCLE;
+		user_test_entity.entity_collider_type = NONE_SHAPE;
 		user_test_entity.entity_type = BULLET;
 		user_test_entity.isActive = true;
 		user_test_entity.follows_mouse = true;
@@ -767,8 +752,29 @@ int main()
 		user_test_entity.capsule_length = 60.0f;
 		user_test_entity.size = { 40.0f, 40.0f };
 		user_test_entity.name = "SmileyUser";
+	Entity in_place_entity;
+	in_place_entity.position = { 100.0f, 300.0f };
+	in_place_entity.radius = 25.0f;
+	in_place_entity.color = RED;
+	in_place_entity.entity_collider_type = CIRCLE;
+	in_place_entity.entity_type = BULLET;
+	in_place_entity.isActive = true;
+	in_place_entity.follows_mouse = false;
+	in_place_entity.apply_mtv = true;
+	in_place_entity.capsule_direction = Vector2Normalize({ 1.0f, 1.0f });
+	in_place_entity.capsule_half_length = 30.0f;
+	in_place_entity.capsule_length = 60.0f;
+	in_place_entity.size = { 40.0f, 40.0f };
+	in_place_entity.name = "InPlaceObject";
+
 	all_entities.push_back(user_test_entity);
 			
+	//all_entities.push_back(in_place_entity);
+
+
+
+	int user_test_entity_arrInd{};
+	int inplace_test_entity_arrInd{};
 
 	std::vector<GUIButtons> all_buttons;
 	std::vector<GUIButtons> top_row;
@@ -807,6 +813,8 @@ int main()
     while (!WindowShouldClose())
     {
 		float dt = GetFrameTime();
+		Vector2 mtv = Vector2Zeros;
+		CollisionFunc collisionFunc = collisionFunctionTable[in_place_entity.entity_collider_type][all_entities[0].entity_collider_type];
 		switch (game_state)
 		{
 		case MAIN:
@@ -873,6 +881,20 @@ int main()
 		}
 
 
+		//tried to figure this out without nesting loops?
+		//dock me marks see if i fight it 
+		// they say AI can replace us but I'd love to see AI code like a monkey in heat getting dragged through broken glass and lemon juice
+		drawFunctionTable[in_place_entity.entity_collider_type](in_place_entity);
+ 
+		
+		if (in_place_entity.isActive && all_entities[0].isActive && collisionFunc) {
+			collisionFunc(in_place_entity, all_entities[0], &mtv);
+		}
+
+
+
+
+
 		//starting to feel less like elite ball knowledge
 		for (GUIButtons& buttons : top_row) {
 			GuiSetState(buttons.gui_state);
@@ -882,6 +904,8 @@ int main()
 					other.gui_state = STATE_NORMAL;
 				}
 				buttons.gui_state = STATE_PRESSED;
+				SwapTestEntity(all_entities[0], buttons.collider_to_use); //Just have to pray to god that the user entity is ALWAYS the first thing in the array... which I guess it always will be. or create a separate array just for it... nah
+				SwapTestEntity(user_test_entity, buttons.collider_to_use);
 			};
 		}
 		for (GUIButtons& buttons : bot_row) {
@@ -891,6 +915,7 @@ int main()
 					other.gui_state = STATE_NORMAL;
 				}
 				buttons.gui_state = STATE_PRESSED;
+				SwapTestEntity(in_place_entity, buttons.collider_to_use); //same prayers as before
 			};
 		}
 
