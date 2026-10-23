@@ -301,10 +301,12 @@ void CircleBoxCollision(Entity& circleEntity, Entity& boxEntity, Vector2* mtv) {
 
 	if (circleEntity.apply_mtv) {
 		circleEntity.position = circleEntity.position + movement; 
+		circleEntity.velocity *= 1;
 	}
 
 	if (boxEntity.apply_mtv) {
 		boxEntity.position = boxEntity.position - movement;
+		circleEntity.velocity *= 1;
 	}
 }
 void CircleCircleCollision(Entity& circleEntityA, Entity& circleEntityB, Vector2* mtv) {
@@ -328,6 +330,8 @@ void CircleCircleCollision(Entity& circleEntityA, Entity& circleEntityB, Vector2
 			*mtv = Vector2Scale(mtv_direction, magnitude);
 			circleEntityA.position = circleEntityA.position + *mtv;
 			circleEntityB.position = circleEntityB.position - *mtv;
+			circleEntityA.velocity *= -1;
+			circleEntityB.velocity *= -1;
 		}
 	}
 }
@@ -359,7 +363,8 @@ void BoxBoxCollision(Entity& boxEntityA, Entity& boxEntityB, Vector2* mtv) {
 			Vector2 movement = Vector2Scale(correction, 1.0f);
 			boxEntityA.position = boxEntityA.position + movement;
 			boxEntityB.position = boxEntityB.position- movement;
-			
+			boxEntityA.velocity *= -1;
+			boxEntityB.velocity *= -1;
 		}
 	}
 }
@@ -386,6 +391,8 @@ void CapsuleCapsuleCollision(Entity& capsuleEntityA, Entity& capsuleEntityB, Vec
 			*mtv = Vector2Scale(mtv_direction, magnitude);
 			capsuleEntityA.position = capsuleEntityA.position + *mtv;
 			capsuleEntityB.position = capsuleEntityB.position- *mtv;
+			capsuleEntityA.velocity *= -1;
+			capsuleEntityB.velocity *= -1;
 		}
 		else {
 			capsuleEntityA.isActive = false;
@@ -514,8 +521,9 @@ void CapsuleBoxCollision(Entity& capsuleEntity, Entity& boxEntity, Vector2* mtv)
 			}
 				Vector2 movement = Vector2Scale(correction, 0.5f);
 				capsuleEntity.position = capsuleEntity.position + movement;
+				capsuleEntity.velocity *= -1;
 				boxEntity.position = boxEntity.position - movement;
-			
+				boxEntity.velocity *= -1;
 		}
 	}
 }
@@ -548,6 +556,8 @@ void CircleCapsuleCollision(Entity& circleEntity, Entity& capsuleEntity, Vector2
 			*mtv = Vector2Scale(mtv_direction, overlap);
 			capsuleEntity.position = capsuleEntity.position - *mtv;
 			circleEntity.position = circleEntity.position+ *mtv;
+			capsuleEntity.velocity *= -1;
+			circleEntity.velocity *= -1;
 		}
 	}
 }
@@ -923,6 +933,7 @@ int main()
 				CollisionFunc collisionFunc = collisionFunctionTable[entityA.entity_collider_type][entityB.entity_collider_type];
 				if (collisionFunc) {
 					collisionFunc(entityA, entityB, &mtv);
+					
 				}
 
 				if (!entityA.isActive) break;
