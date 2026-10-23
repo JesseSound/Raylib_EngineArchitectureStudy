@@ -11,6 +11,7 @@
 #define MAX_WINDOW_WIDTH 800    
 #define MAX_FPS 60
 #define MAX_BULLETS 30
+#define MAX_ENTITIES 128
 #define TESTING false	
 constexpr float BALL_RADIUS = 25.0f;
 constexpr Vector2 GRAVITY = { 0.0f, 19.6f };
@@ -683,6 +684,32 @@ struct GUIButtons {
 	STATE_DISABLED
 } GuiState;*/
 
+//Spawn ball Pit
+
+void SpawnBall(std::vector<Entity>& ballpit) {
+
+	float rand_angle = GetRandomValue(0, 359) * DEG2RAD;
+
+
+	Entity newEntity;
+	newEntity.apply_mtv = true;
+	newEntity.entity_collider_type = CIRCLE;
+	newEntity.color = BLACK;
+	newEntity.radius = 10.0f;
+	newEntity.position = { GetScreenWidth() * 0.5f + cosf(rand_angle) * 50.0f, GetScreenHeight() * 0.5f + sinf(rand_angle) };
+	newEntity.isActive = true;
+
+	newEntity.velocity = { cosf(rand_angle) * 150.0f, sinf(rand_angle) * 150.0f}; 
+
+	ballpit.push_back(newEntity);
+	
+}
+
+
+
+
+
+
 int main()
 {
 	SetupCalls();
@@ -766,11 +793,11 @@ int main()
 	in_place_entity.capsule_length = 60.0f;
 	in_place_entity.size = { 40.0f, 40.0f };
 	in_place_entity.name = "InPlaceObject";
-
+	
 	all_entities.push_back(user_test_entity);
 			
 	//all_entities.push_back(in_place_entity);
-
+	all_entities.push_back(in_place_entity);
 
 
 	int user_test_entity_arrInd{};
@@ -810,9 +837,19 @@ int main()
 		}
 	}
 
+
+	float task_2_timer = 0.5f;
+
+
+
     while (!WindowShouldClose())
     {
 		float dt = GetFrameTime();
+
+	
+
+
+
 		Vector2 mtv = Vector2Zeros;
 		CollisionFunc collisionFunc = collisionFunctionTable[in_place_entity.entity_collider_type][all_entities[0].entity_collider_type];
 		switch (game_state)
@@ -820,8 +857,23 @@ int main()
 		case MAIN:
 			
 			
-			
+			if (task_2_timer >= 0.0f) {
+				task_2_timer -= dt;
+				
+			}
+			if (task_2_timer <= 0.0f) {
+				if (all_entities.size() <= MAX_ENTITIES) {
+					SpawnBall(all_entities);
+				
+				}
+				else {
+					all_entities.erase(all_entities.begin() + 2); //THIS TECHNICALLY ERASES THE FIRST CREATED BALL IN THE BALL PiT WITHOUT DELETING THE USERTEST OBJECT
+					SpawnBall(all_entities);
+				}
+				task_2_timer = 0.5f;
+			}
 
+			
 
 
 
@@ -845,11 +897,22 @@ int main()
 					entity.position = GetMousePosition(); 
 					continue;
 				}
+				else {
+					entity.position += entity.velocity * dt;
 
+					if (entity.position.x >= MAX_WINDOW_WIDTH || entity.position.x <= 0.0f) {
+						entity.velocity.x *= -1;
+					}
+
+					if (entity.position.y >= MAX_WINDOW_HEIGHT || entity.position.y <= 0.0f) {
+						entity.velocity.y *= -1;
+					}
+				}
+				
 			}
 
 
-		//collision checking
+		//collision checking from previous labs but i use now
 		for (int i = 0; i < all_entities.size(); ++i) {
 			Entity& entityA = all_entities[i];
 			if (!entityA.isActive) continue;
@@ -916,6 +979,7 @@ int main()
 				}
 				buttons.gui_state = STATE_PRESSED;
 				SwapTestEntity(in_place_entity, buttons.collider_to_use); //same prayers as before
+				SwapTestEntity(all_entities[1], buttons.collider_to_use);
 			};
 		}
 
